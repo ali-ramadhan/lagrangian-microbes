@@ -1,14 +1,20 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
 filename = '/home/alir/hawaii_npac/0000969408_Theta_10800.8150.1_1080.3720.90'
 
+level = 0
+
 with open(filename, 'rb') as f:
     nx, ny = 1080, 3720  # parse; advance file-pointer to data segment
+
+    record_length = 4  # [bytes]
+
+    f.seek(level * record_length * nx*ny, os.SEEK_SET)
+
     data = np.fromfile(f, dtype='>f4', count=nx*ny)
     array = np.reshape(data, [nx, ny], order='F')
-    data2 = np.fromfile(f, dtype='>f4', count=nx*ny)
-    array2 = np.reshape(data, [nx, ny], order='F')
 
 print('array.min() = {:f}'.format(array.min()))
 print('array.max() = {:f}'.format(array.max()))
@@ -20,7 +26,7 @@ marr = np.ma.masked_where(array == 0, array)
 
 fig = plt.figure(figsize=(9, 16))
 
-plt.imshow(np.transpose(marr), cmap='jet')
+plt.imshow(np.transpose(marr), cmap='prism')
 # plt.imshow(np.transpose(marr), cmap='RdBu', vmin=-2.5, vmax=2.5)
 
 plt.colorbar()

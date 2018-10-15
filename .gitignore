@@ -108,3 +108,7 @@ venv.bak/
 
 # Parcels
 parcels_examples/
+
+# Output data
+*.nc
+*.png

@@ -50,3 +50,24 @@ class MicrobeParticle(parcels.JITParticle):
 
 pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=MicrobeParticle,
     lon=lons_pset, lat=lats_pset)
+
+for i, particle in enumerate(pset):
+    if 37.5 <= particle.lat <= 52.5 and -172.5 <= particle.lon <= -157.5:
+        particle.species = 1
+    elif 37.5 <= particle.lat <= 52.5 and -157.5 <= particle.lon <= -142.5:
+        particle.species = 2
+    elif 37.5 <= particle.lat <= 52.5 and -142.5 <= particle.lon <= -127.5:
+        particle.species = 3
+    elif 22.5 <= particle.lat <= 37.5 and -172.5 <= particle.lon <= -157.5:
+        particle.species = 3
+    elif 22.5 <= particle.lat <= 37.5 and -157.5 <= particle.lon <= -142.5:
+        particle.species = 1
+    elif 22.5 <= particle.lat <= 37.5 and -142.5 <= particle.lon <= -127.5:
+        particle.species = 2
+    elif 7.5 <= particle.lat <= 22.5 and -172.5 <= particle.lon <= -157.5:
+        particle.species = 2
+    elif 7.5 <= particle.lat <= 22.5 and -157.5 <= particle.lon <= -142.5:
+        particle.species = 3
+    elif 7.5 <= particle.lat <= 22.5 and -142.5 <= particle.lon <= -127.5:
+        particle.species = 1
+    print("Particle {:03d} @({:.2f},{:.2f}) [species={:d}]".format(i, particle.lat, particle.lon, particle.species))

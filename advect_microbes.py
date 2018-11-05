@@ -36,3 +36,17 @@ fieldset = parcels.fieldset.FieldSet(u_field, v_field)
 
 lats_pset = np.tile(np.linspace(10, 50, 31), 31)
 lons_pset = np.repeat(np.linspace(-170, -130, 31), 31)
+
+# species_field = -1 * np.ones((11,11), dtype=np.int32)
+# for i, lat in enumerate(np.linspace(10, 50, 11)):
+#   for j, lon in enumerate(np.linspace(-170, -130, 11)):
+#       pass
+
+# species_pfield = parcels.field.Field(name='species', data=species_field,
+#   lat=np.linspace(10, 50, 11), lon=np.linspace(-170, -130, 11), depth=depth, mesh='spherical')
+
+class MicrobeParticle(parcels.JITParticle):
+    species = parcels.Variable('species', dtype=np.int32, initial=-1)
+
+pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=MicrobeParticle,
+    lon=lons_pset, lat=lats_pset)

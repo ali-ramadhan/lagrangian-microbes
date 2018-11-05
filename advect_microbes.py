@@ -72,6 +72,15 @@ for i, particle in enumerate(pset):
         particle.species = 1
     print("Particle {:03d} @({:.2f},{:.2f}) [species={:d}]".format(i, particle.lat, particle.lon, particle.species))
 
+def rock_paper_scissors_type(n):
+    if n == 1:
+        return "rock"
+    elif n == 2:
+        return "paper"
+    elif n == 3:
+        return "scissors"
+    return None
+
 t = datetime(2017, 1, 1)
 dt = timedelta(hours=2)
 
@@ -82,3 +91,39 @@ for n in range(10000):
 
     pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=True,
         output_file=pset.ParticleFile(name=nc_filename, outputdt=dt))
+
+    print("Computing microbe interactions...")
+    
+    N = len(pset)
+    
+    for i, p1 in enumerate(pset):
+        for j, p2 in enumerate(pset[i+1:]):
+            if np.abs(p1.lat - p2.lat) < 1 and np.abs(p1.lon - p2.lon) < 1:
+                p1_type = rock_paper_scissors_type(p1.species)
+                p2_type = rock_paper_scissors_type(p2.species)
+
+                winner = None
+
+                if p1_type == "rock" and p2_type == "scissors":
+                    winner = p1
+                elif p1_type == "rock" and p2_type == "paper":
+                    winner = p2
+                elif p1_type == "paper" and p2_type == "rock":
+                    winner = p1
+                elif p1_type == "paper" and p2_type == "scissors":
+                    winner = p2
+                elif p1_type == "scissors" and p2_type == "rock":
+                    winner = p2
+                elif p1_type == "scissors" and p2_type == "paper":
+                    winner = p1
+                else:
+                    winner = None
+
+                if winner == p1:
+                    p2.species = p1.species
+                    print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
+                        .format(p1_type, i, p1.lat, p1.lon, p2_type, j+i, p2.lat, p2.lon, i))
+                elif winner == p2:
+                    p1.species = p2.species
+                    print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
+                        .format(p1_type, i, p1.lat, p1.lon, p2_type, j+i, p2.lat, p2.lon, j+i))

@@ -71,3 +71,14 @@ for i, particle in enumerate(pset):
     elif 7.5 <= particle.lat <= 22.5 and -142.5 <= particle.lon <= -127.5:
         particle.species = 1
     print("Particle {:03d} @({:.2f},{:.2f}) [species={:d}]".format(i, particle.lat, particle.lon, particle.species))
+
+t = datetime(2017, 1, 1)
+dt = timedelta(hours=2)
+
+for n in range(10000):
+    print("Advecting: {:} -> {:}".format(t, t+dt))
+
+    nc_filename = "advected_microbes_" + str(n).zfill(4) + ".nc"
+
+    pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=True,
+        output_file=pset.ParticleFile(name=nc_filename, outputdt=dt))

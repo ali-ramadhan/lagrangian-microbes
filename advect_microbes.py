@@ -127,3 +127,11 @@ for n in range(10000):
                     p1.species = p2.species
                     print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
                         .format(p1_type, i, p1.lat, p1.lon, p2_type, j+i, p2.lat, p2.lon, j+i))
+
+    for i, p in enumerate(pset):
+        if p.lat >= 59 or p.lat <= 1 or p.lon <= -179 or p.lon >= -121:
+            print("Removing particle #{:d} @({:.2f},{:.2f}). Too close to boundary"
+                .format(i, p.lat, p.lon))
+            pset.remove(i)
+
+    t = t+dt

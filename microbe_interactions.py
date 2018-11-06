@@ -6,11 +6,7 @@ import numpy as np
 import xarray as xr
 from scipy.spatial import KDTree
 
-N = 28**2  # number of microbes
-t = datetime(2017, 1, 1)
-dt = timedelta(hours=2)
-tpd = 12  # time steps per day
-n_days = 7  # number of days to advect microbes for
+from constants import N, t, dt, tpd, n_days
 
 def rps_type(n):
     if n == 1:

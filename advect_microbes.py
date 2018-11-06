@@ -5,6 +5,8 @@ import numpy as np
 import xarray as xr
 import parcels
 
+from constants import N, t, dt, tpd, n_days
+
 velocity_dataset_filepath = '/home/alir/nobackup/data/oscar_third_deg_180/oscar_vel2017_180.nc'
 
 # Load velocity dataset
@@ -35,11 +37,6 @@ lons_pset = np.repeat(np.linspace(-170, -130, 28), 28)
 
 pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
     lon=lons_pset, lat=lats_pset)
-
-t = datetime(2017, 1, 1)
-dt = timedelta(hours=2)
-tpd = 12  # time steps per day
-n_days = 7  # number of days to advect microbes for
 
 for n in range(n_days):
     print("Advecting: {:} -> {:}... ".format(t, t+tpd*dt), end="")

@@ -7,6 +7,8 @@ import cartopy.util
 import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 
+from constants import N, t, dt, tpd, n_days
+
 vector_crs = ccrs.PlateCarree()
 land_50m = cartopy.feature.NaturalEarthFeature('physical', 'land', '50m',
     edgecolor='face',facecolor='dimgray', linewidth=0)

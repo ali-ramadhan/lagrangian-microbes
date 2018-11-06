@@ -18,7 +18,7 @@ def rps_type(n):
     return None
 
 def initialize_microbe_species():
-    microbe_location_filepath = "rps_microbe_locations_d0000.nc"
+    microbe_location_filepath = "rps_microbe_locations_p0000.nc"
     microbe_location_dataset = xr.open_dataset(microbe_location_filepath)
     
     lon0 = microbe_location_dataset["lon"][:, 0].values
@@ -48,23 +48,25 @@ def initialize_microbe_species():
         elif 7.5 <= lat <= 22.5 and -142.5 <= lon <= -127.5:
             microbe_species[i] = 1
 
-        print("#{:d}: lon={:.2f}, lat={:.2f}, species={:d}".format(i, lon, lat, microbe_species[i]))
+        # print("#{:d}: lon={:.2f}, lat={:.2f}, species={:d}".format(i, lon, lat, microbe_species[i]))
 
     return microbe_species
 
 microbe_species = initialize_microbe_species()
 
-for day in range(7):
-    microbe_location_filepath = "rps_microbe_locations_d" + str(day).zfill(4) + ".nc"
+for period in range(5):
+    microbe_location_filepath = "rps_microbe_locations_p" + str(period).zfill(4) + ".nc"
     microbe_location_dataset = xr.open_dataset(microbe_location_filepath)
 
-    for n in range(tpd):
+    hours = len(microbe_location_dataset["time"][0, :])
+
+    for n in range(hours):
         print("{:} ".format(t), end="")
         lons = microbe_location_dataset["lon"][:, n].values
         lats = microbe_location_dataset["lat"][:, n].values
         microbe_locations = np.stack((lons, lats), axis=-1)
 
-        print("Building k-d tree... ", end="")
+        print("Building kd tree... ", end="")
         t1 = time.time()
         kd = KDTree(np.array(microbe_locations))
         t2 = time.time()
@@ -106,7 +108,7 @@ for day in range(7):
                     print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
                         .format(s1, p1, lats[p1], lons[p1], s2, p2, lats[p2], lons[p2], p2))
 
-        pickle_filepath = "rps_microbe_species_d" + str(day).zfill(4) + "_n" + str(n).zfill(2) + ".pickle"
+        pickle_filepath = "rps_microbe_species_p" + str(period).zfill(4) + "_h" + str(n).zfill(3) + ".pickle"
         with open(pickle_filepath, 'wb') as f:
             pickle.dump(np.stack((lons, lats, microbe_species), axis=-1), f, pickle.HIGHEST_PROTOCOL)
 

@@ -87,7 +87,7 @@ def advect_microbes(pset, year, n):
 
     print("Advecting: {:} -> {:}... ".format(t_start_ch, t_end_ch), end="")
 
-    nc_filename = "rps_microbe_locations_d" + str(n).zfill(4) + ".nc"
+    nc_filename = "rps_microbe_locations_p" + str(n).zfill(4) + ".nc"
 
     tic = time.time()
     pset.execute(parcels.AdvectionRK4, runtime=advection_hours*dt, dt=dt, output_file=pset.ParticleFile(name=nc_filename, outputdt=dt))

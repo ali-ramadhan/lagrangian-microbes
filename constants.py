@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+output_dir = "rps_proof_of_concept"
+
 N = 28**2  # number of microbes
 t = datetime(2017, 1, 1)  # initial time
 dt = timedelta(hours=2)  # advection time step

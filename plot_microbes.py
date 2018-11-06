@@ -2,6 +2,7 @@ import pickle
 
 import numpy as np
 import xarray as xr
+import joblib
 
 import matplotlib
 import matplotlib.cm as cm
@@ -14,7 +15,7 @@ from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 
 from constants import N, t, dt, tpd, n_days
 
-for day in range(7):
+def plot_frames_for_day(day):
     velocity_dataset_filepath = '/home/alir/nobackup/data/oscar_third_deg_180/oscar_vel2017_180.nc'
     velocity_dataset = xr.open_dataset(velocity_dataset_filepath)
     velocity_subdataset = velocity_dataset.sel(time=np.datetime64('2017-01-01'), year=2017.0, depth=15.0,
@@ -94,3 +95,7 @@ for day in range(7):
         plt.savefig(png_filename, dpi=300, format='png', transparent=False)
 
         plt.close('all')
+
+if __name__ == "__main__":
+    print("Found {:d} CPUs.".format(joblib.cpu_count()))
+    joblib.Parallel(n_jobs=-1)(joblib.delayed(plot_frames_for_day)(d) for d in range(n_days))

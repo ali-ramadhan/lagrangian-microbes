@@ -30,54 +30,12 @@ v_field = parcels.field.Field(name='V', data=v_data,
 u_magnitude = np.sqrt(u_data*u_data + v_data*v_data)
 
 fieldset = parcels.fieldset.FieldSet(u_field, v_field)
-# fieldset.U.show()
 
 lats_pset = np.tile(np.linspace(10, 50, 91), 91)
 lons_pset = np.repeat(np.linspace(-170, -130, 91), 91)
 
-# species_field = -1 * np.ones((11,11), dtype=np.int32)
-# for i, lat in enumerate(np.linspace(10, 50, 11)):
-#   for j, lon in enumerate(np.linspace(-170, -130, 11)):
-#       pass
-
-# species_pfield = parcels.field.Field(name='species', data=species_field,
-#   lat=np.linspace(10, 50, 11), lon=np.linspace(-170, -130, 11), depth=depth, mesh='spherical')
-
-class MicrobeParticle(parcels.JITParticle):
-    species = parcels.Variable('species', dtype=np.int32, initial=-1)
-
-pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=MicrobeParticle,
+pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
     lon=lons_pset, lat=lats_pset)
-
-for i, particle in enumerate(pset):
-    if 37.5 <= particle.lat <= 52.5 and -172.5 <= particle.lon <= -157.5:
-        particle.species = 1
-    elif 37.5 <= particle.lat <= 52.5 and -157.5 <= particle.lon <= -142.5:
-        particle.species = 2
-    elif 37.5 <= particle.lat <= 52.5 and -142.5 <= particle.lon <= -127.5:
-        particle.species = 3
-    elif 22.5 <= particle.lat <= 37.5 and -172.5 <= particle.lon <= -157.5:
-        particle.species = 3
-    elif 22.5 <= particle.lat <= 37.5 and -157.5 <= particle.lon <= -142.5:
-        particle.species = 1
-    elif 22.5 <= particle.lat <= 37.5 and -142.5 <= particle.lon <= -127.5:
-        particle.species = 2
-    elif 7.5 <= particle.lat <= 22.5 and -172.5 <= particle.lon <= -157.5:
-        particle.species = 2
-    elif 7.5 <= particle.lat <= 22.5 and -157.5 <= particle.lon <= -142.5:
-        particle.species = 3
-    elif 7.5 <= particle.lat <= 22.5 and -142.5 <= particle.lon <= -127.5:
-        particle.species = 1
-    # print("Particle {:03d} @({:.2f},{:.2f}) [species={:d}]".format(i, particle.lat, particle.lon, particle.species))
-
-def rock_paper_scissors_type(n):
-    if n == 1:
-        return "rock"
-    elif n == 2:
-        return "paper"
-    elif n == 3:
-        return "scissors"
-    return None
 
 t = datetime(2017, 1, 1)
 dt = timedelta(hours=2)

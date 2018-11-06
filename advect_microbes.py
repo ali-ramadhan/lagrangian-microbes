@@ -44,7 +44,7 @@ n_days = 7  # number of days to advect microbes for
 for n in range(n_days):
     print("Advecting: {:} -> {:}... ".format(t, t+tpd*dt), end="")
 
-    nc_filename = "rps_microbe_locations_" + str(n).zfill(4) + ".nc"
+    nc_filename = "rps_microbe_locations_d" + str(n).zfill(4) + ".nc"
 
     t1 = time.time()
     pset.execute(parcels.AdvectionRK4, runtime=tpd*dt, dt=dt, output_file=pset.ParticleFile(name=nc_filename, outputdt=dt))

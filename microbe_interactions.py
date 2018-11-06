@@ -12,7 +12,7 @@ dt = timedelta(hours=2)
 tpd = 12  # time steps per day
 n_days = 7  # number of days to advect microbes for
 
-def rock_paper_scissors_type(n):
+def rps_type(n):
     if n == 1:
         return "rock"
     elif n == 2:
@@ -80,7 +80,35 @@ for day in range(7):
         t2 = time.time()
         print("({:g} s) ".format(t2 - t1), end="")
 
-        print(" {:d} interacting pairs.".format(len(microbe_pairs)))
+        print(" {:d} pairs.".format(len(microbe_pairs)))
+
+        for pair in microbe_pairs:
+            p1, p2 = pair
+            if microbe_species[p1] != microbe_species[p2]:
+                s1, s2 = rps_type(microbe_species[p1]), rps_type(microbe_species[p2])
+                
+                winner = None
+                if s1 == "rock" and s2 == "scissors":
+                    winner = p1
+                elif s1 == "rock" and s2 == "paper":
+                    winner = p2
+                elif s1 == "paper" and s2 == "rock":
+                    winner = p1
+                elif s1 == "paper" and s2 == "scissors":
+                    winner = p2
+                elif s1 == "scissors" and s2 == "rock":
+                    winner = p2
+                elif s1 == "scissors" and s2 == "paper":
+                    winner = p1
+
+                if winner == p1:
+                    microbe_species[p2] = microbe_species[p1]
+                    print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
+                        .format(s1, p1, lats[p1], lons[p1], s2, p2, lats[p2], lons[p2], p1))
+                elif winner == p2:
+                    microbe_species[p1] = microbe_species[p2]
+                    print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
+                        .format(s1, p1, lats[p1], lons[p1], s2, p2, lats[p2], lons[p2], p2))
 
         pickle_filepath = "rps_microbe_species_d" + str(day).zfill(4) + "_n" + str(n).zfill(2) + ".pickle"
         with open(pickle_filepath, 'wb') as f:

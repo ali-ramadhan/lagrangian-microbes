@@ -4,19 +4,16 @@ from datetime import datetime, timedelta
 import numpy as np
 import xarray as xr
 import parcels
+from scipy.spatial import KDTree
 
 velocity_dataset_filepath = '/home/alir/nobackup/data/oscar_third_deg_180/oscar_vel2017_180.nc'
 
 # Load velocity dataset
 velocity_dataset = xr.open_dataset(velocity_dataset_filepath)
-print(velocity_dataset)
 
 # Choose subset of velocity field we want to use
 velocity_subdataset = velocity_dataset.sel(time=np.datetime64('2017-01-01'), year=2017.0, depth=15.0,
     latitude=slice(60, 0), longitude=slice(-180, -120))
-
-print(velocity_subdataset)
-print(velocity_subdataset['u'])
 
 lats = velocity_subdataset['latitude'].values
 lons = velocity_subdataset['longitude'].values
@@ -35,8 +32,8 @@ u_magnitude = np.sqrt(u_data*u_data + v_data*v_data)
 fieldset = parcels.fieldset.FieldSet(u_field, v_field)
 # fieldset.U.show()
 
-lats_pset = np.tile(np.linspace(10, 50, 31), 31)
-lons_pset = np.repeat(np.linspace(-170, -130, 31), 31)
+lats_pset = np.tile(np.linspace(10, 50, 91), 91)
+lons_pset = np.repeat(np.linspace(-170, -130, 91), 91)
 
 # species_field = -1 * np.ones((11,11), dtype=np.int32)
 # for i, lat in enumerate(np.linspace(10, 50, 11)):
@@ -71,7 +68,7 @@ for i, particle in enumerate(pset):
         particle.species = 3
     elif 7.5 <= particle.lat <= 22.5 and -142.5 <= particle.lon <= -127.5:
         particle.species = 1
-    print("Particle {:03d} @({:.2f},{:.2f}) [species={:d}]".format(i, particle.lat, particle.lon, particle.species))
+    # print("Particle {:03d} @({:.2f},{:.2f}) [species={:d}]".format(i, particle.lat, particle.lon, particle.species))
 
 def rock_paper_scissors_type(n):
     if n == 1:
@@ -84,57 +81,19 @@ def rock_paper_scissors_type(n):
 
 t = datetime(2017, 1, 1)
 dt = timedelta(hours=2)
+tpd = 12  # time steps per day
+n_days = 7  # number of days to advect microbes for
 
-for n in range(10000):
-    print("Advecting: {:} -> {:}".format(t, t+dt))
+for n in range(n_days):
+    print("Advecting: {:} -> {:}... ".format(t, t+tpd*dt))
 
     nc_filename = "advected_microbes_" + str(n).zfill(4) + ".nc"
 
     t1 = time.time()
-    pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=True,
+    pset.execute(parcels.AdvectionRK4, runtime=tpd*dt, dt=dt, verbose_progress=True,
         output_file=pset.ParticleFile(name=nc_filename, outputdt=dt))
     t2 = time.time()
-    print("Advection took {:g} s".format(t2 - t1))
-
-    print("Computing microbe interactions...", end="")
-    
-    t1 = time.time()
-    N = len(pset)
-    
-    for i, p1 in enumerate(pset):
-        for j, p2 in enumerate(pset[i+1:]):
-            if np.abs(p1.lat - p2.lat) < 1 and np.abs(p1.lon - p2.lon) < 1:
-                p1_type = rock_paper_scissors_type(p1.species)
-                p2_type = rock_paper_scissors_type(p2.species)
-
-                winner = None
-
-                if p1_type == "rock" and p2_type == "scissors":
-                    winner = p1
-                elif p1_type == "rock" and p2_type == "paper":
-                    winner = p2
-                elif p1_type == "paper" and p2_type == "rock":
-                    winner = p1
-                elif p1_type == "paper" and p2_type == "scissors":
-                    winner = p2
-                elif p1_type == "scissors" and p2_type == "rock":
-                    winner = p2
-                elif p1_type == "scissors" and p2_type == "paper":
-                    winner = p1
-                else:
-                    winner = None
-
-                if winner == p1:
-                    p2.species = p1.species
-                    print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
-                        .format(p1_type, i, p1.lat, p1.lon, p2_type, j+i, p2.lat, p2.lon, i))
-                elif winner == p2:
-                    p1.species = p2.species
-                    print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
-                        .format(p1_type, i, p1.lat, p1.lon, p2_type, j+i, p2.lat, p2.lon, j+i))
-
-    t2 = time.time()
-    print(" ({:g} s)".format(t2 - t1))
+    print("({:g} s)".format(t2 - t1))
 
     for i, p in enumerate(pset):
         if p.lat >= 59 or p.lat <= 1 or p.lon <= -179 or p.lon >= -121:

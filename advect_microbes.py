@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import numpy as np
 import xarray as xr
 import parcels
-from scipy.spatial import KDTree
 
 velocity_dataset_filepath = '/home/alir/nobackup/data/oscar_third_deg_180/oscar_vel2017_180.nc'
 
@@ -31,8 +30,8 @@ u_magnitude = np.sqrt(u_data*u_data + v_data*v_data)
 
 fieldset = parcels.fieldset.FieldSet(u_field, v_field)
 
-lats_pset = np.tile(np.linspace(10, 50, 91), 91)
-lons_pset = np.repeat(np.linspace(-170, -130, 91), 91)
+lats_pset = np.tile(np.linspace(10, 50, 28), 28)
+lons_pset = np.repeat(np.linspace(-170, -130, 28), 28)
 
 pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
     lon=lons_pset, lat=lats_pset)
@@ -43,13 +42,12 @@ tpd = 12  # time steps per day
 n_days = 7  # number of days to advect microbes for
 
 for n in range(n_days):
-    print("Advecting: {:} -> {:}... ".format(t, t+tpd*dt))
+    print("Advecting: {:} -> {:}... ".format(t, t+tpd*dt), end="")
 
-    nc_filename = "advected_microbes_" + str(n).zfill(4) + ".nc"
+    nc_filename = "rps_microbe_locations_" + str(n).zfill(4) + ".nc"
 
     t1 = time.time()
-    pset.execute(parcels.AdvectionRK4, runtime=tpd*dt, dt=dt, verbose_progress=True,
-        output_file=pset.ParticleFile(name=nc_filename, outputdt=dt))
+    pset.execute(parcels.AdvectionRK4, runtime=tpd*dt, dt=dt, output_file=pset.ParticleFile(name=nc_filename, outputdt=dt))
     t2 = time.time()
     print("({:g} s)".format(t2 - t1))
 

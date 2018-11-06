@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -89,11 +90,15 @@ for n in range(10000):
 
     nc_filename = "advected_microbes_" + str(n).zfill(4) + ".nc"
 
+    t1 = time.time()
     pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=True,
         output_file=pset.ParticleFile(name=nc_filename, outputdt=dt))
+    t2 = time.time()
+    print("Advection took {:g} s".format(t2 - t1))
 
-    print("Computing microbe interactions...")
+    print("Computing microbe interactions...", end="")
     
+    t1 = time.time()
     N = len(pset)
     
     for i, p1 in enumerate(pset):
@@ -127,6 +132,9 @@ for n in range(10000):
                     p1.species = p2.species
                     print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
                         .format(p1_type, i, p1.lat, p1.lon, p2_type, j+i, p2.lat, p2.lon, j+i))
+
+    t2 = time.time()
+    print(" ({:g} s)".format(t2 - t1))
 
     for i, p in enumerate(pset):
         if p.lat >= 59 or p.lat <= 1 or p.lon <= -179 or p.lon >= -121:

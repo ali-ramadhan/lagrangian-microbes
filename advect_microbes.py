@@ -10,7 +10,7 @@ import joblib
 
 from constants import lon_min, lon_max, lat_min, lat_max
 from constants import N, Tx, Ty, NTx, NTy
-from constants import t, dt, tpd, n_days
+from constants import t, dt, tpd, n_periods
 from utils import closest_hour
 
 def advect_microbes(jid, mlons, mlats):
@@ -41,7 +41,7 @@ def advect_microbes(jid, mlons, mlats):
 
     pset = parcels.ParticleSet.from_list(fieldset=fieldset0, pclass=parcels.JITParticle, lon=mlons, lat=mlats)
     
-    for period in range(2):
+    for period in range(n_periods):
         t_start = velocity_dataset["time"][period].values
         
         # If we're on the last field, then t_end will be midnight of next year.
@@ -87,7 +87,9 @@ def advect_microbes(jid, mlons, mlats):
 
         tic = time.time()
         for h in range(advection_hours):
-            pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
+            pset.execute(parcels.AdvectionRK4 + pset.Kernel(parcels.periodicBC),
+                runtime=dt, dt=dt, verbose_progress=False, output_file=None)
+
             for i, p in enumerate(pset):
                 latlon_store["lon"][h, i] = p.lon
                 latlon_store["lat"][h, i] = p.lat
@@ -99,11 +101,11 @@ def advect_microbes(jid, mlons, mlats):
         toc = time.time()
         print("({:g} s)".format(toc - tic))
 
-        for i, p in enumerate(pset):
-            if p.lat >= 59 or p.lat <= 1 or p.lon <= -179 or p.lon >= -121:
-                print("Removing particle #{:d} @({:.2f},{:.2f}). Too close to boundary"
-                    .format(i, p.lat, p.lon))
-                pset.remove(i)
+        # for i, p in enumerate(pset):
+        #     if p.lat >= 59 or p.lat <= 1 or p.lon <= -179 or p.lon >= -121:
+        #         print("Removing particle #{:d} @({:.2f},{:.2f}). Too close to boundary"
+        #             .format(i, p.lat, p.lon))
+        #         pset.remove(i)
 
 if __name__ == "__main__":
     # psset = initialize_microbes()  # Particle superset (a list of ParticleSets)

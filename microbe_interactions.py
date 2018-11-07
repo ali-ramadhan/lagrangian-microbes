@@ -9,7 +9,7 @@ from scipy.spatial import KDTree
 import joblib
 
 from constants import N, Tx, Ty, NTx, NTy
-from constants import t, dt, tpd, n_days
+from constants import t, dt, tpd, n_periods
 
 def rps_type(n):
     if n == 1:
@@ -28,28 +28,29 @@ def initialize_microbe_species(microbe_locations):
     # lat0 = microbe_location_dataset["lat"][:, 0].values
     # microbe_locations = np.stack((lon0, lat0), axis=-1)
 
-    microbe_species = np.zeros(N, dtype=int)
+    microbe_species = np.random.choice([1, 2, 3], N)
 
-    for i, ml in enumerate(microbe_locations):
-        lon, lat = ml
-        if 37.5 <= lat <= 52.5 and -172.5 <= lon <= -157.5:
-            microbe_species[i] = 1
-        elif 37.5 <= lat <= 52.5 and -157.5 <= lon <= -142.5:
-            microbe_species[i] = 2
-        elif 37.5 <= lat <= 52.5 and -142.5 <= lon <= -127.5:
-            microbe_species[i] = 3
-        elif 22.5 <= lat <= 37.5 and -172.5 <= lon <= -157.5:
-            microbe_species[i] = 3
-        elif 22.5 <= lat <= 37.5 and -157.5 <= lon <= -142.5:
-            microbe_species[i] = 1
-        elif 22.5 <= lat <= 37.5 and -142.5 <= lon <= -127.5:
-            microbe_species[i] = 2
-        elif 7.5 <= lat <= 22.5 and -172.5 <= lon <= -157.5:
-            microbe_species[i] = 2
-        elif 7.5 <= lat <= 22.5 and -157.5 <= lon <= -142.5:
-            microbe_species[i] = 3
-        elif 7.5 <= lat <= 22.5 and -142.5 <= lon <= -127.5:
-            microbe_species[i] = 1
+    # microbe_species = np.zeros(N, dtype=int)
+    # for i, ml in enumerate(microbe_locations):
+    #     lon, lat = ml
+    #     if 37.5 <= lat <= 52.5 and -172.5 <= lon <= -157.5:
+    #         microbe_species[i] = 1
+    #     elif 37.5 <= lat <= 52.5 and -157.5 <= lon <= -142.5:
+    #         microbe_species[i] = 2
+    #     elif 37.5 <= lat <= 52.5 and -142.5 <= lon <= -127.5:
+    #         microbe_species[i] = 3
+    #     elif 22.5 <= lat <= 37.5 and -172.5 <= lon <= -157.5:
+    #         microbe_species[i] = 3
+    #     elif 22.5 <= lat <= 37.5 and -157.5 <= lon <= -142.5:
+    #         microbe_species[i] = 1
+    #     elif 22.5 <= lat <= 37.5 and -142.5 <= lon <= -127.5:
+    #         microbe_species[i] = 2
+    #     elif 7.5 <= lat <= 22.5 and -172.5 <= lon <= -157.5:
+    #         microbe_species[i] = 2
+    #     elif 7.5 <= lat <= 22.5 and -157.5 <= lon <= -142.5:
+    #         microbe_species[i] = 3
+    #     elif 7.5 <= lat <= 22.5 and -142.5 <= lon <= -127.5:
+    #         microbe_species[i] = 1
 
         # print("#{:d}: lon={:.2f}, lat={:.2f}, species={:d}".format(i, lon, lat, microbe_species[i]))
 
@@ -57,7 +58,7 @@ def initialize_microbe_species(microbe_locations):
 
 microbe_species = None
 
-for period in range(2):
+for period in range(4):
     # microbe_location_filepath = "rps_microbe_locations_p" + str(period).zfill(4) + ".nc"
     # microbe_location_dataset = xr.open_dataset(microbe_location_filepath)
     # hours = len(microbe_location_dataset["time"][0, :])
@@ -96,12 +97,13 @@ for period in range(2):
 
         print("Querying pairs... ", end="")
         tic = time.time()
-        microbe_pairs = kd.query_pairs(r=0.5, p=2)
+        microbe_pairs = kd.query_pairs(r=0.05, p=2)
         toc = time.time()
         print("({:g} s) ".format(toc - tic), end="")
 
-        print(" {:d} pairs.".format(len(microbe_pairs)))
+        print(" {:d} pairs. ".format(len(microbe_pairs)), end="")
 
+        n_battles = 0
         for pair in microbe_pairs:
             p1, p2 = pair
             if microbe_species[p1] != microbe_species[p2]:
@@ -123,12 +125,16 @@ for period in range(2):
 
                 if winner == p1:
                     microbe_species[p2] = microbe_species[p1]
-                    print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
-                        .format(s1, p1, lats[h, p1], lons[h, p1], s2, p2, lats[h, p2], lons[h, p2], p1))
+                    # print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
+                    #     .format(s1, p1, lats[h, p1], lons[h, p1], s2, p2, lats[h, p2], lons[h, p2], p1))
                 elif winner == p2:
                     microbe_species[p1] = microbe_species[p2]
-                    print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
-                        .format(s1, p1, lats[h, p1], lons[h, p1], s2, p2, lats[h, p2], lons[h, p2], p2))
+                    # print("[{:s}#{:d}] @({:.2f}, {:.2f}) vs. [{:s}#{:d}] @({:.2f}, {:.2f}): #{:d} wins!"
+                    #     .format(s1, p1, lats[h, p1], lons[h, p1], s2, p2, lats[h, p2], lons[h, p2], p2))
+
+                n_battles += 1
+
+        print("{:d} battles.".format(n_battles))
 
         pickle_filepath = "rps_microbe_species_p" + str(period).zfill(4) + "_h" + str(h).zfill(3) + ".pickle"
         with open(pickle_filepath, 'wb') as f:

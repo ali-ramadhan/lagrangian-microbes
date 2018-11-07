@@ -16,7 +16,7 @@ import cartopy.util
 import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 
-from constants import N, t, dt, tpd, n_days
+from constants import N, t, dt, tpd, n_periods
 from utils import closest_hour
 
 def plot_microbe_warfare_frame(fname):
@@ -94,9 +94,12 @@ def plot_microbe_warfare_frame(fname):
             scissors_lats.append(mlats[i])
             scissors_lons.append(mlons[i])
 
-    ax.plot(rock_lons, rock_lats, marker='o', linestyle='', color='red', ms=2, label='Rocks', transform=vector_crs)
-    ax.plot(paper_lons, paper_lats, marker='o', linestyle='', color='lime', ms=2, label='Papers', transform=vector_crs)
-    ax.plot(scissors_lons, scissors_lats, marker='o', linestyle='', color='cyan', ms=2, label='Scissors', transform=vector_crs)
+    ax.scatter(rock_lons, rock_lats, marker='o', color='red', s=0.2, label='Rocks', transform=vector_crs)
+    ax.scatter(paper_lons, paper_lats, marker='o', color='limegreen', s=0.2, label='Papers', transform=vector_crs)
+    ax.scatter(scissors_lons, scissors_lats, marker='o', color='blue', s=0.2, label='Scissors', transform=vector_crs)
+    # ax.plot(rock_lons, rock_lats, marker='.', linestyle='', fillstyle='full', color='red', ms=0.2, label='Rocks', transform=vector_crs)
+    # ax.plot(paper_lons, paper_lats, marker='.', linestyle='', fillstyle='full', color='lime', ms=0.2, label='Papers', transform=vector_crs)
+    # ax.plot(scissors_lons, scissors_lats, marker='.', linestyle='', fillstyle='full', color='cyan', ms=0.2, label='Scissors', transform=vector_crs)
 
     plt.title(closest_hour(t_start) + hour*dt)
     ax.legend()

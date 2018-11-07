@@ -126,6 +126,6 @@ def renumber_files():
 
 if __name__ == "__main__":
     print("Found {:d} CPUs.".format(joblib.cpu_count()))
-    interaction_files = glob.glob("*.pickle")
-    # joblib.Parallel(n_jobs=-1)(joblib.delayed(plot_microbe_warfare_frame)(f) for f in interaction_files[1:280])
+    interaction_files = glob.glob("rps_microbe_species*.pickle")
+    joblib.Parallel(n_jobs=-1)(joblib.delayed(plot_microbe_warfare_frame)(f) for f in interaction_files)
     renumber_files()

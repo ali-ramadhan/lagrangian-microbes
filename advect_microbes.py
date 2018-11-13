@@ -1,4 +1,4 @@
-import sys
+import os
 import time
 import pickle
 from datetime import datetime, timedelta
@@ -11,6 +11,7 @@ import joblib
 from constants import lon_min, lon_max, lat_min, lat_max
 from constants import N, Tx, Ty, NTx, NTy
 from constants import t, dt, tpd, n_periods
+from constants import output_dir
 from utils import closest_hour
 
 def advect_microbes(jid, mlons, mlats):
@@ -20,7 +21,7 @@ def advect_microbes(jid, mlons, mlats):
     # Load velocity dataset
     velocity_dataset = xr.open_dataset(velocity_dataset_filepath)
     n_fields = len(velocity_dataset["time"])
-    
+
     # Choose subset of velocity field for initial conditions.
     velocity_subdataset = velocity_dataset.sel(time=np.datetime64('2017-01-01'), year=2017.0, depth=15.0,
         latitude=slice(60, 0), longitude=slice(-180, -120))
@@ -40,16 +41,16 @@ def advect_microbes(jid, mlons, mlats):
     fieldset0 = parcels.fieldset.FieldSet(u0_field, v0_field)
 
     pset = parcels.ParticleSet.from_list(fieldset=fieldset0, pclass=parcels.JITParticle, lon=mlons, lat=mlats)
-    
+
     for period in range(n_periods):
         t_start = velocity_dataset["time"][period].values
-        
+
         # If we're on the last field, then t_end will be midnight of next year.
         if period == n_fields:
             t_end = datetime(t_start.year + 1, 1, 1)
         else:
             t_end = velocity_dataset["time"][period+1].values
-        
+
         t_start_ch = closest_hour(t_start)
         t_end_ch = closest_hour(t_end)
 
@@ -77,7 +78,8 @@ def advect_microbes(jid, mlons, mlats):
         pset.fieldset.check_complete()
 
         dump_filename = "rps_microbe_locations_p" + str(period).zfill(4) + "_block" + str(jid).zfill(2) + ".joblib.pickle"
-        print("[{:02d}] Advecting: {:} -> {:} ({:s})... ".format(jid, t_start_ch, t_end_ch, dump_filename), end="")
+        dump_filepath = os.path.join(output_dir, dump_filename)
+        print("[{:02d}] Advecting: {:} -> {:} ({:s})... ".format(jid, t_start_ch, t_end_ch, dump_filepath), end="")
 
         latlon_store = {
             "hours": advection_hours,
@@ -87,7 +89,7 @@ def advect_microbes(jid, mlons, mlats):
 
         tic = time.time()
         for h in range(advection_hours):
-            pset.execute(parcels.AdvectionRK4 + pset.Kernel(parcels.periodicBC),
+            pset.execute(parcels.AdvectionRK4,
                 runtime=dt, dt=dt, verbose_progress=False, output_file=None)
 
             for i, p in enumerate(pset):
@@ -95,7 +97,7 @@ def advect_microbes(jid, mlons, mlats):
                 latlon_store["lat"][h, i] = p.lat
 
         # joblib.dump(latlon_store, dump_filename, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
-        with open(dump_filename, "wb") as f:
+        with open(dump_filepath, "wb") as f:
             joblib.dump(latlon_store, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
 
         toc = time.time()
@@ -109,7 +111,7 @@ def advect_microbes(jid, mlons, mlats):
 
 if __name__ == "__main__":
     # psset = initialize_microbes()  # Particle superset (a list of ParticleSets)
-    
+
     print("Found {:d} CPUs.".format(joblib.cpu_count()))
 
     mlon_blocks = Tx*Ty * [None]
@@ -123,7 +125,7 @@ if __name__ == "__main__":
             mlon_max = lon_min + (i+1)*delta_lon
             mlat_min = lat_min + j*delta_lat
             mlat_max = lat_min + (j+1)*delta_lat
-            
+
             # print("(Tx={:d}, Ty={:d}) {:.2f}-{:.2f} E, {:.2f}-{:.2f} N".format(i, j, mlon_min, mlon_max, mlat_min, mlat_max))
             # print("(i,j,i*Ty+j) = ({:d},{:d},{:d})".format(i, j, i*Ty+j))
 

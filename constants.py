@@ -1,17 +1,20 @@
+import os
 from datetime import datetime, timedelta
 
-output_dir = "rps_proof_of_concept"
+output_dir = os.path.join("/home", "alir", "nobackup", "lagrangian_microbe_output", "rps_small_patch_280kp")
 
-lon_min, lon_max = -170, -130
-lat_min, lat_max = 10, 50
+# lon_min, lon_max = -170, -130
+# lat_min, lat_max = 10, 50
+lon_min, lon_max = -155, -145
+lat_min, lat_max = 25, 35
 
 # N = 28**2  # number of microbes
 Tx, Ty = 4, 7  # number of "tiles" in the x and y.
-NTx, NTy = 50, 50  # number of microbes in each tile (x and y directions)
+NTx, NTy = 100, 100  # number of microbes in each tile (x and y directions)
 N = Tx*Ty*NTx*NTy  # number of microbes
 
 t = datetime(2017, 1, 1)  # initial time
 dt = timedelta(hours=1)  # advection time step
 tpd = int(timedelta(days=1) / dt)   # time steps per day
 
-n_periods = 36  # number of periods to advect microbes for
+n_periods = 72  # number of periods to advect microbes for

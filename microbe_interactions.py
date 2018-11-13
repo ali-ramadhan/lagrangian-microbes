@@ -1,15 +1,16 @@
-import sys
+import os
 import time
 import pickle
 from datetime import datetime, timedelta
 
 import numpy as np
 import xarray as xr
-from scipy.spatial import KDTree
+from scipy.spatial import cKDTree
 import joblib
 
 from constants import N, Tx, Ty, NTx, NTy
 from constants import t, dt, tpd, n_periods
+from constants import output_dir
 
 def rps_type(n):
     if n == 1:
@@ -23,7 +24,7 @@ def rps_type(n):
 def initialize_microbe_species(microbe_locations):
     # microbe_location_filepath = "rps_microbe_locations_p0000.nc"
     # microbe_location_dataset = xr.open_dataset(microbe_location_filepath)
-    
+
     # lon0 = microbe_location_dataset["lon"][:, 0].values
     # lat0 = microbe_location_dataset["lat"][:, 0].values
     # microbe_locations = np.stack((lon0, lat0), axis=-1)
@@ -58,16 +59,18 @@ def initialize_microbe_species(microbe_locations):
 
 microbe_species = None
 
-for period in range(4):
+for period in range(n_periods):
     # microbe_location_filepath = "rps_microbe_locations_p" + str(period).zfill(4) + ".nc"
     # microbe_location_dataset = xr.open_dataset(microbe_location_filepath)
     # hours = len(microbe_location_dataset["time"][0, :])
 
     lons, lats = None, None
 
+    tic = time.time()
     for block in range(Tx*Ty):
         dump_filename = "rps_microbe_locations_p" + str(period).zfill(4) + "_block" + str(block).zfill(2) + ".joblib.pickle"
-        latlon_store = joblib.load(dump_filename)
+        dump_filepath = os.path.join(output_dir, dump_filename)
+        latlon_store = joblib.load(dump_filepath)
 
         if block == 0:
             hours = latlon_store["hours"]
@@ -79,8 +82,12 @@ for period in range(4):
         lons[:, i1:i2] = latlon_store["lon"]
         lats[:, i1:i2] = latlon_store["lat"]
 
+    toc = time.time()
+    print("Reading files... ({:g} s) ".format(toc - tic))
+
     for h in range(hours):
         print("{:} ".format(t), end="")
+
         # lons = microbe_location_dataset["lon"][:, n].values
         # lats = microbe_location_dataset["lat"][:, n].values
         # microbe_locations = np.stack((lons, lats), axis=-1)
@@ -91,24 +98,25 @@ for period in range(4):
 
         print("Building kd tree... ", end="")
         tic = time.time()
-        kd = KDTree(np.array(microbe_locations))
+        kd = cKDTree(np.array(microbe_locations))
         toc = time.time()
         print("({:g} s) ".format(toc - tic), end="")
 
         print("Querying pairs... ", end="")
         tic = time.time()
-        microbe_pairs = kd.query_pairs(r=0.05, p=2)
+        microbe_pairs = kd.query_pairs(r=0.01, p=2)
         toc = time.time()
         print("({:g} s) ".format(toc - tic), end="")
 
         print(" {:d} pairs. ".format(len(microbe_pairs)), end="")
 
+        tic = time.time()
         n_battles = 0
         for pair in microbe_pairs:
             p1, p2 = pair
             if microbe_species[p1] != microbe_species[p2]:
                 s1, s2 = rps_type(microbe_species[p1]), rps_type(microbe_species[p2])
-                
+
                 winner = None
                 if s1 == "rock" and s2 == "scissors":
                     winner = p1
@@ -134,10 +142,12 @@ for period in range(4):
 
                 n_battles += 1
 
-        print("{:d} battles.".format(n_battles))
+        toc = time.time()
+        print("{:d} battles. ({:g} s)".format(n_battles, toc - tic))
 
-        pickle_filepath = "rps_microbe_species_p" + str(period).zfill(4) + "_h" + str(h).zfill(3) + ".pickle"
-        with open(pickle_filepath, 'wb') as f:
+        pickle_fname = "rps_microbe_species_p" + str(period).zfill(4) + "_h" + str(h).zfill(3) + ".pickle"
+        pickle_fpath = os.path.join(output_dir, pickle_fname)
+        with open(pickle_fpath, 'wb') as f:
             pickle.dump(np.stack((lons[h, :], lats[h, :], microbe_species), axis=-1), f, pickle.HIGHEST_PROTOCOL)
 
         t = t + dt

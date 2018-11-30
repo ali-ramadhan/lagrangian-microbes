@@ -18,3 +18,7 @@ dt = timedelta(hours=1)  # advection time step
 tpd = int(timedelta(days=1) / dt)   # time steps per day
 
 n_periods = 3  # number of periods to advect microbes for
+
+INTERACTION_LENGTH_SCALE = 0.75  # degrees lol...
+INTERACTION_NORM = 2
+INTERACTION_p = 0.9

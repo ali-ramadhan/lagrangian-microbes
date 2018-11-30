@@ -11,6 +11,9 @@ import joblib
 from constants import N, Tx, Ty, NTx, NTy
 from constants import t, dt, tpd, n_periods
 from constants import output_dir
+from constants import INTERACTION_LENGTH_SCALE, INTERACTION_NORM, INTERACTION_p
+
+p = INTERACTION_p
 
 def rps_type(n):
     if n == 1:
@@ -66,6 +69,7 @@ for period in range(n_periods):
 
     lons, lats = None, None
 
+    print("Reading files ({:s})... ".format(output_dir), end="")
     tic = time.time()
     for block in range(Tx*Ty):
         dump_filename = "rps_microbe_locations_p" + str(period).zfill(4) + "_block" + str(block).zfill(2) + ".joblib.pickle"
@@ -83,7 +87,7 @@ for period in range(n_periods):
         lats[:, i1:i2] = latlon_store["lat"]
 
     toc = time.time()
-    print("Reading files... ({:g} s) ".format(toc - tic))
+    print("({:g} s) ".format(toc - tic))
 
     for h in range(hours):
         print("{:} ".format(t), end="")
@@ -104,7 +108,7 @@ for period in range(n_periods):
 
         print("Querying pairs... ", end="")
         tic = time.time()
-        microbe_pairs = kd.query_pairs(r=0.01, p=2)
+        microbe_pairs = kd.query_pairs(r=INTERACTION_LENGTH_SCALE, p=INTERACTION_NORM)
         toc = time.time()
         print("({:g} s) ".format(toc - tic), end="")
 
@@ -117,19 +121,36 @@ for period in range(n_periods):
             if microbe_species[p1] != microbe_species[p2]:
                 s1, s2 = rps_type(microbe_species[p1]), rps_type(microbe_species[p2])
 
+                r = np.random.rand()  # Random float from Uniform[0,1)
+
                 winner = None
-                if s1 == "rock" and s2 == "scissors":
-                    winner = p1
-                elif s1 == "rock" and s2 == "paper":
-                    winner = p2
-                elif s1 == "paper" and s2 == "rock":
-                    winner = p1
-                elif s1 == "paper" and s2 == "scissors":
-                    winner = p2
-                elif s1 == "scissors" and s2 == "rock":
-                    winner = p2
-                elif s1 == "scissors" and s2 == "paper":
-                    winner = p1
+
+                if r < p:  # Forward interaction
+                    if s1 == "rock" and s2 == "scissors":
+                        winner = p1
+                    elif s1 == "rock" and s2 == "paper":
+                        winner = p2
+                    elif s1 == "paper" and s2 == "rock":
+                        winner = p1
+                    elif s1 == "paper" and s2 == "scissors":
+                        winner = p2
+                    elif s1 == "scissors" and s2 == "rock":
+                        winner = p2
+                    elif s1 == "scissors" and s2 == "paper":
+                        winner = p1
+                elif r > p:  # Reverse interaction
+                    if s1 == "rock" and s2 == "scissors":
+                        winner = p2
+                    elif s1 == "rock" and s2 == "paper":
+                        winner = p1
+                    elif s1 == "paper" and s2 == "rock":
+                        winner = p2
+                    elif s1 == "paper" and s2 == "scissors":
+                        winner = p1
+                    elif s1 == "scissors" and s2 == "rock":
+                        winner = p1
+                    elif s1 == "scissors" and s2 == "paper":
+                        winner = p2
 
                 if winner == p1:
                     microbe_species[p2] = microbe_species[p1]

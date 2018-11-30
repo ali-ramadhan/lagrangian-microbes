@@ -22,26 +22,6 @@ def advect_microbes(jid, mlons, mlats):
     velocity_dataset = xr.open_dataset(velocity_dataset_filepath)
     n_fields = len(velocity_dataset["time"])
 
-    # Choose subset of velocity field for initial conditions.
-    velocity_subdataset = velocity_dataset.sel(time=np.datetime64('2017-01-01'), year=2017.0, depth=15.0,
-        latitude=slice(60, 0), longitude=slice(-180, -120))
-
-    glats0 = velocity_subdataset['latitude'].values
-    glons0 = velocity_subdataset['longitude'].values
-    depth = np.array([15.0])
-
-    u0_data = velocity_subdataset['u'].values
-    v0_data = velocity_subdataset['v'].values
-
-    u0_field = parcels.field.Field(name='U', data=u0_data,
-        lon=glons0, lat=glats0, depth=depth, mesh='spherical')
-    v0_field = parcels.field.Field(name='V', data=v0_data,
-        lon=glons0, lat=glats0, depth=depth, mesh='spherical')
-
-    fieldset0 = parcels.fieldset.FieldSet(u0_field, v0_field)
-
-    pset = parcels.ParticleSet.from_list(fieldset=fieldset0, pclass=parcels.JITParticle, lon=mlons, lat=mlats)
-
     for period in range(n_periods):
         t_start = velocity_dataset["time"][period].values
 
@@ -74,8 +54,9 @@ def advect_microbes(jid, mlons, mlats):
         v_field = parcels.field.Field(name='V', data=v_data,
             lon=glons, lat=glats, depth=depth, mesh='spherical')
 
-        pset.fieldset = parcels.fieldset.FieldSet(u_field, v_field)
-        pset.fieldset.check_complete()
+        fieldset = parcels.fieldset.FieldSet(u_field, v_field)
+
+        pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle, lon=mlons, lat=mlats)
 
         dump_filename = "rps_microbe_locations_p" + str(period).zfill(4) + "_block" + str(jid).zfill(2) + ".joblib.pickle"
         dump_filepath = os.path.join(output_dir, dump_filename)
@@ -96,9 +77,16 @@ def advect_microbes(jid, mlons, mlats):
                 latlon_store["lon"][h, i] = p.lon
                 latlon_store["lat"][h, i] = p.lat
 
-        # joblib.dump(latlon_store, dump_filename, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
         with open(dump_filepath, "wb") as f:
             joblib.dump(latlon_store, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
+
+        # Create new mlon and mlat lists to create new particle set.
+        n_particles = len(pset)
+        mlon = np.zeros(n_particles)
+        mlat = np.zeros(n_particles)
+        for i, p in enumerate(pset):
+            mlon[i] = p.lon
+            mlat[i] = p.lat
 
         toc = time.time()
         print("({:g} s)".format(toc - tic))

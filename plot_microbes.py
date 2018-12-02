@@ -17,23 +17,21 @@ import cartopy.util
 import cartopy.crs as ccrs
 from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 
-from constants import output_dir
+from constants import INTERACTION_OUTPUT_DIR, PLOTS_OUTPUT_DIR
+from constants import ROCK_COLOR, PAPER_COLOR, SCISSOR_COLOR, MICROBE_MARKER_SIZE
 from constants import N, t, dt, tpd, n_periods
 from utils import closest_hour
 
-vector_crs = ccrs.PlateCarree()
-land_50m = cartopy.feature.NaturalEarthFeature('physical', 'land', '50m',
-    edgecolor='face',facecolor='dimgray', linewidth=0)
 
-def plot_microbe_warfare_frame(fpath):
-    period = int(re.search("p\d\d\d\d", fpath).group(0)[1:])
-    hour = int(re.search("h\d\d\d", fpath).group(0)[1:])
+velocity_dataset_filepath = '/home/alir/nobackup/data/oscar_third_deg_180/oscar_vel2017_180.nc'
+velocity_dataset = xr.open_dataset(velocity_dataset_filepath)
 
-    print("Plotting figure from {:s}...".format(fpath))
+t_starts = n_periods * [None]
+u_magnitude = n_periods * [None]
 
-    velocity_dataset_filepath = '/home/alir/nobackup/data/oscar_third_deg_180/oscar_vel2017_180.nc'
-    velocity_dataset = xr.open_dataset(velocity_dataset_filepath)
+print("Reading in velocity fields...")
 
+for period in range(n_periods):
     t_start = velocity_dataset["time"][period].values
     year_float = velocity_dataset["year"].values[period]
     depth_float = velocity_dataset["depth"].values[0]
@@ -49,19 +47,31 @@ def plot_microbe_warfare_frame(fpath):
     u_data = velocity_subdataset['u'].values
     v_data = velocity_subdataset['v'].values
 
-    u_magnitude = np.sqrt(u_data*u_data + v_data*v_data)
+    t_starts[period] = t_start
+    u_magnitude[period] = np.sqrt(u_data*u_data + v_data*v_data)
+
+
+vector_crs = ccrs.PlateCarree()
+land_50m = cartopy.feature.NaturalEarthFeature('physical', 'land', '50m',
+    edgecolor='face',facecolor='dimgray', linewidth=0)
+
+crs_sps = ccrs.PlateCarree(central_longitude=-150)
+crs_sps._threshold = 1000.0  # This solves https://github.com/SciTools/cartopy/issues/363
+
+def plot_microbe_warfare_frame(fpath):
+    period = int(re.search("p\d\d\d\d", fpath).group(0)[1:])
+    hour = int(re.search("h\d\d\d", fpath).group(0)[1:])
+
+    print("Plotting figure from {:s}...".format(fpath))
 
     with open(fpath, "rb") as f:
         microbes = pickle.load(f)
 
-    # Microbe longitudes and latidues.
-    mlons, mlats, species = microbes[:, 0], microbes[:, 1], microbes[:, 2]
+        # Microbe longitudes and latidues.
+        mlons, mlats, species = microbes[:, 0], microbes[:, 1], microbes[:, 2]
 
     fig = plt.figure(figsize=(16, 9))
     matplotlib.rcParams.update({'font.size': 10})
-
-    crs_sps = ccrs.PlateCarree(central_longitude=-150)
-    crs_sps._threshold = 1000.0  # This solves https://github.com/SciTools/cartopy/issues/363
 
     ax = plt.subplot(111, projection=crs_sps)
     ax.add_feature(land_50m)
@@ -76,14 +86,10 @@ def plot_microbe_warfare_frame(fpath):
     gl.xformatter = LONGITUDE_FORMATTER
     gl.yformatter = LATITUDE_FORMATTER
 
-    im = ax.pcolormesh(glons, glats, u_magnitude, transform=vector_crs, vmin=0, vmax=1, cmap='Blues_r')
+    im = ax.pcolormesh(glons, glats, u_magnitude[period], transform=vector_crs, vmin=0, vmax=1, cmap='Blues_r')
 
     clb = fig.colorbar(im, ax=ax, extend='max', fraction=0.046, pad=0.1)
     clb.ax.set_title(r'm/s')
-
-    ROCK_COLOR = "red"
-    PAPER_COLOR = "limegreen"
-    SCISSOR_COLOR = "blue"
 
     n_microbes = len(mlons)
     colors = n_microbes * [""]
@@ -97,9 +103,9 @@ def plot_microbe_warfare_frame(fpath):
             colors[i] = SCISSOR_COLOR
 
     ms = matplotlib.markers.MarkerStyle(marker=".", fillstyle="full")
-    plt.scatter(mlons, mlats, marker=ms, linewidths=0, c=colors, edgecolors=colors, facecolors=colors, s=1, transform=vector_crs)
+    plt.scatter(mlons, mlats, marker=ms, linewidths=0, c=colors, edgecolors=colors, facecolors=colors, s=MICROBE_MARKER_SIZE, transform=vector_crs)
 
-    plt.title(closest_hour(t_start) + hour*dt)
+    plt.title(closest_hour(t_starts[period]) + hour*dt)
 
     rock_patch = Patch(color=ROCK_COLOR, label="Rocks")
     paper_patch = Patch(color=PAPER_COLOR, label="Papers")
@@ -107,14 +113,14 @@ def plot_microbe_warfare_frame(fpath):
     ax.legend(handles=[rock_patch, paper_patch, scissor_patch])
 
     png_fname = "microbe_warfare_ph" + str(period).zfill(4) + str(hour).zfill(3) + ".png"
-    png_fpath = os.path.join(output_dir, png_fname)
+    png_fpath = os.path.join(PLOTS_OUTPUT_DIR, png_fname)
     print("Saving figure: {:s}".format(png_fpath))
     plt.savefig(png_fpath, dpi=300, format='png', transparent=False)
 
     plt.close('all')
 
 def renumber_files():
-    frame_files = glob.glob(output_dir + "/microbe_warfare_ph*.png")
+    frame_files = glob.glob(PLOTS_OUTPUT_DIR + "/microbe_warfare_ph*.png")
     nfiles = len(frame_files)
 
     print("Renaming {:d} files...".format(nfiles))
@@ -123,10 +129,10 @@ def renumber_files():
     new_i = 0
     while new_i < nfiles:
         fname = "microbe_warfare_ph" + str(old_i).zfill(7) + ".png"
-        fpath = os.path.join(output_dir, fname)
+        fpath = os.path.join(PLOTS_OUTPUT_DIR, fname)
         if os.path.isfile(fpath):
             new_fname = "microbe_warfare_ph" + str(new_i).zfill(7) + ".png"
-            new_fpath = os.path.join(output_dir, new_fname)
+            new_fpath = os.path.join(PLOTS_OUTPUT_DIR, new_fname)
             os.rename(fpath, new_fpath)
             print("Rename: {:s} -> {:s}".format(fpath, new_fpath))
             new_i += 1
@@ -134,8 +140,11 @@ def renumber_files():
 
 if __name__ == "__main__":
     print("Found {:d} CPUs.".format(joblib.cpu_count()))
-    print("Globbing files from {:s}... ".format(output_dir), end="")
-    interaction_files = glob.glob(output_dir + "/rps_microbe_species*.pickle")
+
+    print("Globbing files from {:s}... ".format(INTERACTION_OUTPUT_DIR), end="")
+    interaction_files = glob.glob(INTERACTION_OUTPUT_DIR + "/rps_microbe_species*.pickle")
     print("{:d} files found.".format(len(interaction_files)))
+
     joblib.Parallel(n_jobs=-1)(joblib.delayed(plot_microbe_warfare_frame)(f) for f in interaction_files)
+    
     renumber_files()

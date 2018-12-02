@@ -36,7 +36,7 @@ function pairwise_dist_kernel(lat::CuDeviceVector{Float32}, lon::CuDeviceVector{
         lon_j = shmem[2*blockDim().x + blockDim().y + threadIdx().y]
 
         bin = CUDAnative.floor(10.0f0 * CUDAnative.log10(haversine_gpu(lat_i, lon_i, lat_j, lon_j, 6371.228f3)))
-        @inbounds dist_hist[threadIdx().x, threadIdx().y] += 1
+        # dist_hist[bin] += 1  # Cannot work of course!!!
     end
 
     return

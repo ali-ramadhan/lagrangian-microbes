@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import pickle
 from datetime import datetime, timedelta
@@ -10,10 +11,15 @@ import joblib
 
 from constants import ADVECTION_OUTPUT_DIR, INTERACTION_OUTPUT_DIR
 from constants import N, Tx, Ty, NTx, NTy
+from constants import delta_mlat, delta_mlon
 from constants import t, dt, tpd, n_periods
 from constants import INTERACTION_LENGTH_SCALE, INTERACTION_NORM, INTERACTION_p
+from utils import runtime2str
 
-p = INTERACTION_p
+prob = INTERACTION_p
+
+print("Microbe Δlon={:3g}, Δlat={:3g}".format(delta_mlon, delta_mlat))
+print("Interaction: length_scale={:g}, norm={:d}, p={:.2f}".format(INTERACTION_LENGTH_SCALE, INTERACTION_NORM, INTERACTION_p))
 
 def rps_type(n):
     if n == 1:
@@ -69,8 +75,8 @@ for period in range(n_periods):
 
     lons, lats = None, None
 
-    print("Reading files ({:s})... ".format(ADVECTION_OUTPUT_DIR), end="")
-    tic = time.time()
+    print("Reading microbe location from advection files ({:s})... ".format(ADVECTION_OUTPUT_DIR), end="")
+    t1 = time.time()
     for block in range(Tx*Ty):
         dump_filename = "rps_microbe_locations_p" + str(period).zfill(4) + "_block" + str(block).zfill(2) + ".joblib.pickle"
         dump_filepath = os.path.join(ADVECTION_OUTPUT_DIR, dump_filename)
@@ -86,8 +92,8 @@ for period in range(n_periods):
         lons[:, i1:i2] = latlon_store["lon"]
         lats[:, i1:i2] = latlon_store["lat"]
 
-    toc = time.time()
-    print("({:g} s) ".format(toc - tic))
+    t2 = time.time()
+    print("({:}) ".format(runtime2str(t2 - t1)))
 
     for h in range(hours):
         print("{:} ".format(t), end="")
@@ -101,20 +107,25 @@ for period in range(n_periods):
             microbe_species = initialize_microbe_species(microbe_locations)
 
         print("Building kd tree... ", end="")
-        tic = time.time()
+        t1 = time.time()
         kd = cKDTree(np.array(microbe_locations))
-        toc = time.time()
-        print("({:g} s) ".format(toc - tic), end="")
+        t2 = time.time()
+        print("({:}) ".format(runtime2str(t2 - t1)), end="")
 
         print("Querying pairs... ", end="")
-        tic = time.time()
+        t1 = time.time()
         microbe_pairs = kd.query_pairs(r=INTERACTION_LENGTH_SCALE, p=INTERACTION_NORM)
-        toc = time.time()
-        print("({:g} s) ".format(toc - tic), end="")
+        t2 = time.time()
+        print("({:}) ".format(runtime2str(t2 - t1)), end="")
 
         print(" {:d} pairs. ".format(len(microbe_pairs)), end="")
 
-        tic = time.time()
+        # for pair in microbe_pairs:
+        #     p1, p2 = pair
+        #     print("{:}: ({:f}, {:f}), ({:f}, {:f})".format(pair, lats[h, p1], lons[h, p1], lats[h, p2], lons[h, p2]))
+        # sys.exit(89)
+
+        t1 = time.time()
         n_battles = 0
         for pair in microbe_pairs:
             p1, p2 = pair
@@ -125,7 +136,7 @@ for period in range(n_periods):
 
                 winner = None
 
-                if r < p:  # Forward interaction
+                if r < prob:  # Forward interaction
                     if s1 == "rock" and s2 == "scissors":
                         winner = p1
                     elif s1 == "rock" and s2 == "paper":
@@ -138,7 +149,7 @@ for period in range(n_periods):
                         winner = p2
                     elif s1 == "scissors" and s2 == "paper":
                         winner = p1
-                elif r > p:  # Reverse interaction
+                elif r > prob:  # Reverse interaction
                     if s1 == "rock" and s2 == "scissors":
                         winner = p2
                     elif s1 == "rock" and s2 == "paper":
@@ -163,8 +174,8 @@ for period in range(n_periods):
 
                 n_battles += 1
 
-        toc = time.time()
-        print("{:d} battles. ({:g} s)".format(n_battles, toc - tic))
+        t2 = time.time()
+        print("{:d} battles. ({:})".format(n_battles, runtime2str(t2 - t1)))
 
         pickle_fname = "rps_microbe_species_p" + str(period).zfill(4) + "_h" + str(h).zfill(3) + ".pickle"
         pickle_fpath = os.path.join(INTERACTION_OUTPUT_DIR, pickle_fname)

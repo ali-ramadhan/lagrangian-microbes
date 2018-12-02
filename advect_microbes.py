@@ -9,6 +9,7 @@ import parcels
 import joblib
 
 from constants import ADVECTION_OUTPUT_DIR
+from constants import DOMAIN_LONS, DOMAIN_LATS
 from constants import lon_min, lon_max, lat_min, lat_max
 from constants import N, Tx, Ty, NTx, NTy
 from constants import t, dt, tpd, n_periods
@@ -40,7 +41,7 @@ def advect_microbes(jid, mlons, mlats):
         # Choose subset of velocity field we want to use
         year_float = velocity_dataset["year"].values[period]
         depth_float = velocity_dataset["depth"].values[0]
-        velocity_subdataset = velocity_dataset.sel(time=t_start, year=year_float, depth=depth_float, latitude=slice(60, 0), longitude=slice(-180, -120))
+        velocity_subdataset = velocity_dataset.sel(time=t_start, year=year_float, depth=depth_float, latitude=DOMAIN_LATS, longitude=DOMAIN_LONS)
 
         glats = velocity_subdataset['latitude'].values
         glons = velocity_subdataset['longitude'].values
@@ -99,15 +100,16 @@ def advect_microbes(jid, mlons, mlats):
         #         pset.remove(i)
 
 if __name__ == "__main__":
-    # psset = initialize_microbes()  # Particle superset (a list of ParticleSets)
-
-    print("Found {:d} CPUs.".format(joblib.cpu_count()))
-
     mlon_blocks = Tx*Ty * [None]
     mlat_blocks = Tx*Ty * [None]
 
-    delta_lon = (lon_max - lon_min) / Tx
-    delta_lat = (lat_max - lat_min) / Ty
+    delta_lon = (lon_max - lon_min) / (Tx * NTx)
+    delta_lat = (lat_max - lat_min) / (Ty * NTy)
+
+    print("Number of microbes: {:d}".format(N))
+    print("Δlon={:3g}, Δlat={:3g}".format(delta_lon, delta_lat))
+    print("Found {:d} CPUs.".format(joblib.cpu_count()))
+
     for i in range(Tx):
         for j in range(Ty):
             mlon_min = lon_min + i*delta_lon

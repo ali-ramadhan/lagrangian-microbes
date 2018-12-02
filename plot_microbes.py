@@ -21,6 +21,10 @@ from constants import output_dir
 from constants import N, t, dt, tpd, n_periods
 from utils import closest_hour
 
+vector_crs = ccrs.PlateCarree()
+land_50m = cartopy.feature.NaturalEarthFeature('physical', 'land', '50m',
+    edgecolor='face',facecolor='dimgray', linewidth=0)
+
 def plot_microbe_warfare_frame(fpath):
     period = int(re.search("p\d\d\d\d", fpath).group(0)[1:])
     hour = int(re.search("h\d\d\d", fpath).group(0)[1:])
@@ -53,10 +57,6 @@ def plot_microbe_warfare_frame(fpath):
     # Microbe longitudes and latidues.
     mlons, mlats, species = microbes[:, 0], microbes[:, 1], microbes[:, 2]
 
-    vector_crs = ccrs.PlateCarree()
-    land_50m = cartopy.feature.NaturalEarthFeature('physical', 'land', '50m',
-        edgecolor='face',facecolor='dimgray', linewidth=0)
-
     fig = plt.figure(figsize=(16, 9))
     matplotlib.rcParams.update({'font.size': 10})
 
@@ -81,45 +81,29 @@ def plot_microbe_warfare_frame(fpath):
     clb = fig.colorbar(im, ax=ax, extend='max', fraction=0.046, pad=0.1)
     clb.ax.set_title(r'm/s')
 
-    rock_lats, rock_lons = [], []
-    paper_lats, paper_lons = [], []
-    scissors_lats, scissors_lons = [], []
+    ROCK_COLOR = "red"
+    PAPER_COLOR = "limegreen"
+    SCISSOR_COLOR = "blue"
 
-    for i in range(len(species)):
+    n_microbes = len(mlons)
+    colors = n_microbes * [""]
+
+    for i in range(n_microbes):
         if species[i] == 1:
-            rock_lats.append(mlats[i])
-            rock_lons.append(mlons[i])
+            colors[i] = ROCK_COLOR
         elif species[i] == 2:
-            paper_lats.append(mlats[i])
-            paper_lons.append(mlons[i])
+            colors[i] = PAPER_COLOR
         elif species[i] == 3:
-            scissors_lats.append(mlats[i])
-            scissors_lons.append(mlons[i])
+            colors[i] = SCISSOR_COLOR
 
     ms = matplotlib.markers.MarkerStyle(marker=".", fillstyle="full")
-
-    if hour % 3 == 0:
-        ax.scatter(rock_lons, rock_lats, marker=ms, linewidths=0, c="red", edgecolors="red", facecolors="red", s=1, label='Rocks', transform=vector_crs)
-        ax.scatter(paper_lons, paper_lats, marker=ms, linewidths=0, color="limegreen", facecolor="limegreen", s=1, label='Papers', transform=vector_crs)
-        ax.scatter(scissors_lons, scissors_lats, marker=ms, linewidths=0, color="blue", edgecolor="blue", facecolor="blue", s=1, label='Scissors', transform=vector_crs)
-    elif hour % 3 == 1:
-        ax.scatter(scissors_lons, scissors_lats, marker=ms, linewidths=0, color="blue", edgecolor="blue", facecolor="blue", s=1, label='Scissors', transform=vector_crs)
-        ax.scatter(rock_lons, rock_lats, marker=ms, linewidths=0, c="red", edgecolors="red", facecolors="red", s=1, label='Rocks', transform=vector_crs)
-        ax.scatter(paper_lons, paper_lats, marker=ms, linewidths=0, color="limegreen", facecolor="limegreen", s=1, label='Papers', transform=vector_crs)
-    else:
-        ax.scatter(paper_lons, paper_lats, marker=ms, linewidths=0, color="limegreen", facecolor="limegreen", s=1, label='Papers', transform=vector_crs)
-        ax.scatter(scissors_lons, scissors_lats, marker=ms, linewidths=0, color="blue", edgecolor="blue", facecolor="blue", s=1, label='Scissors', transform=vector_crs)
-        ax.scatter(rock_lons, rock_lats, marker=ms, linewidths=0, c="red", edgecolors="red", facecolors="red", s=1, label='Rocks', transform=vector_crs)
-    
-    # ax.plot(rock_lons, rock_lats, marker='.', linestyle='', linewidth=0, color="red", markeredgecolor="red", markerfacecolor="red", ms=0.5, label='Rocks', transform=vector_crs)
-    # ax.plot(paper_lons, paper_lats, marker='.', linestyle='', linewidth=0, color="limegreen", markeredgecolor="limegreen", markerfacecolor="limegreen", ms=0.5, label='Papers', transform=vector_crs)
-    # ax.plot(scissors_lons, scissors_lats, marker='.', linestyle='', linewidth=0, color="blue", markeredgecolor="blue", markerfacecolor="blue", ms=0.5, label='Scissors', transform=vector_crs)
+    plt.scatter(mlons, mlats, marker=ms, linewidths=0, c=colors, edgecolors=colors, facecolors=colors, s=1, transform=vector_crs)
 
     plt.title(closest_hour(t_start) + hour*dt)
 
-    rock_patch = Patch(color="red", label="Rocks")
-    paper_patch = Patch(color="limegreen", label="Papers")
-    scissor_patch = Patch(color="blue", label="Scissors")
+    rock_patch = Patch(color=ROCK_COLOR, label="Rocks")
+    paper_patch = Patch(color=PAPER_COLOR, label="Papers")
+    scissor_patch = Patch(color=SCISSOR_COLOR, label="Scissors")
     ax.legend(handles=[rock_patch, paper_patch, scissor_patch])
 
     png_fname = "microbe_warfare_ph" + str(period).zfill(4) + str(hour).zfill(3) + ".png"

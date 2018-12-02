@@ -8,9 +8,9 @@ import xarray as xr
 from scipy.spatial import cKDTree
 import joblib
 
+from constants import ADVECTION_OUTPUT_DIR, INTERACTION_OUTPUT_DIR
 from constants import N, Tx, Ty, NTx, NTy
 from constants import t, dt, tpd, n_periods
-from constants import output_dir
 from constants import INTERACTION_LENGTH_SCALE, INTERACTION_NORM, INTERACTION_p
 
 p = INTERACTION_p
@@ -69,11 +69,11 @@ for period in range(n_periods):
 
     lons, lats = None, None
 
-    print("Reading files ({:s})... ".format(output_dir), end="")
+    print("Reading files ({:s})... ".format(ADVECTION_OUTPUT_DIR), end="")
     tic = time.time()
     for block in range(Tx*Ty):
         dump_filename = "rps_microbe_locations_p" + str(period).zfill(4) + "_block" + str(block).zfill(2) + ".joblib.pickle"
-        dump_filepath = os.path.join(output_dir, dump_filename)
+        dump_filepath = os.path.join(ADVECTION_OUTPUT_DIR, dump_filename)
         latlon_store = joblib.load(dump_filepath)
 
         if block == 0:
@@ -167,7 +167,7 @@ for period in range(n_periods):
         print("{:d} battles. ({:g} s)".format(n_battles, toc - tic))
 
         pickle_fname = "rps_microbe_species_p" + str(period).zfill(4) + "_h" + str(h).zfill(3) + ".pickle"
-        pickle_fpath = os.path.join(output_dir, pickle_fname)
+        pickle_fpath = os.path.join(INTERACTION_OUTPUT_DIR, pickle_fname)
         with open(pickle_fpath, 'wb') as f:
             pickle.dump(np.stack((lons[h, :], lats[h, :], microbe_species), axis=-1), f, pickle.HIGHEST_PROTOCOL)
 

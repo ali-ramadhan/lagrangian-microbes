@@ -8,10 +8,10 @@ import xarray as xr
 import parcels
 import joblib
 
+from constants import ADVECTION_OUTPUT_DIR
 from constants import lon_min, lon_max, lat_min, lat_max
 from constants import N, Tx, Ty, NTx, NTy
 from constants import t, dt, tpd, n_periods
-from constants import output_dir
 from utils import closest_hour
 
 def advect_microbes(jid, mlons, mlats):
@@ -59,7 +59,8 @@ def advect_microbes(jid, mlons, mlats):
         pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle, lon=mlons, lat=mlats)
 
         dump_filename = "rps_microbe_locations_p" + str(period).zfill(4) + "_block" + str(jid).zfill(2) + ".joblib.pickle"
-        dump_filepath = os.path.join(output_dir, dump_filename)
+        dump_filepath = os.path.join(ADVECTION_OUTPUT_DIR, dump_filename)
+        
         print("[{:02d}] Advecting: {:} -> {:} ({:s})... ".format(jid, t_start_ch, t_end_ch, dump_filepath), end="")
 
         latlon_store = {

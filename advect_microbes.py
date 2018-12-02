@@ -82,11 +82,11 @@ def advect_microbes(jid, mlons, mlats):
 
         # Create new mlon and mlat lists to create new particle set.
         n_particles = len(pset)
-        mlon = np.zeros(n_particles)
-        mlat = np.zeros(n_particles)
+        mlons = np.zeros(n_particles)
+        mlats = np.zeros(n_particles)
         for i, p in enumerate(pset):
-            mlon[i] = p.lon
-            mlat[i] = p.lat
+            mlons[i] = p.lon
+            mlats[i] = p.lat
 
         toc = time.time()
         print("({:g} s)".format(toc - tic))

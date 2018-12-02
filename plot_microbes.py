@@ -97,9 +97,20 @@ def plot_microbe_warfare_frame(fpath):
             scissors_lons.append(mlons[i])
 
     ms = matplotlib.markers.MarkerStyle(marker=".", fillstyle="full")
-    ax.scatter(rock_lons, rock_lats, marker=ms, linewidths=0, c="red", edgecolors="red", facecolors="red", s=1, label='Rocks', transform=vector_crs)
-    ax.scatter(paper_lons, paper_lats, marker=ms, linewidths=0, color="limegreen", facecolor="limegreen", s=1, label='Papers', transform=vector_crs)
-    ax.scatter(scissors_lons, scissors_lats, marker=ms, linewidths=0, color="blue", edgecolor="blue", facecolor="blue", s=1, label='Scissors', transform=vector_crs)
+
+    if hour % 3 == 0:
+        ax.scatter(rock_lons, rock_lats, marker=ms, linewidths=0, c="red", edgecolors="red", facecolors="red", s=1, label='Rocks', transform=vector_crs)
+        ax.scatter(paper_lons, paper_lats, marker=ms, linewidths=0, color="limegreen", facecolor="limegreen", s=1, label='Papers', transform=vector_crs)
+        ax.scatter(scissors_lons, scissors_lats, marker=ms, linewidths=0, color="blue", edgecolor="blue", facecolor="blue", s=1, label='Scissors', transform=vector_crs)
+    elif hour % 3 == 1:
+        ax.scatter(scissors_lons, scissors_lats, marker=ms, linewidths=0, color="blue", edgecolor="blue", facecolor="blue", s=1, label='Scissors', transform=vector_crs)
+        ax.scatter(rock_lons, rock_lats, marker=ms, linewidths=0, c="red", edgecolors="red", facecolors="red", s=1, label='Rocks', transform=vector_crs)
+        ax.scatter(paper_lons, paper_lats, marker=ms, linewidths=0, color="limegreen", facecolor="limegreen", s=1, label='Papers', transform=vector_crs)
+    else:
+        ax.scatter(paper_lons, paper_lats, marker=ms, linewidths=0, color="limegreen", facecolor="limegreen", s=1, label='Papers', transform=vector_crs)
+        ax.scatter(scissors_lons, scissors_lats, marker=ms, linewidths=0, color="blue", edgecolor="blue", facecolor="blue", s=1, label='Scissors', transform=vector_crs)
+        ax.scatter(rock_lons, rock_lats, marker=ms, linewidths=0, c="red", edgecolors="red", facecolors="red", s=1, label='Rocks', transform=vector_crs)
+    
     # ax.plot(rock_lons, rock_lats, marker='.', linestyle='', linewidth=0, color="red", markeredgecolor="red", markerfacecolor="red", ms=0.5, label='Rocks', transform=vector_crs)
     # ax.plot(paper_lons, paper_lats, marker='.', linestyle='', linewidth=0, color="limegreen", markeredgecolor="limegreen", markerfacecolor="limegreen", ms=0.5, label='Papers', transform=vector_crs)
     # ax.plot(scissors_lons, scissors_lats, marker='.', linestyle='', linewidth=0, color="blue", markeredgecolor="blue", markerfacecolor="blue", ms=0.5, label='Scissors', transform=vector_crs)

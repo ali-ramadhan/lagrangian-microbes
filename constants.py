@@ -8,9 +8,9 @@ OUTPUT_ROOT_DIR = os.path.join("/home", "alir", "nobackup", "lagrangian_microbe_
 # INTERACTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "debug_2.8kp_p0.9_interactions")
 # PLOTS_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "debug_2.8kp_p0.9_plots")
 
-ADVECTION_OUTPUT_DIR = os.path.join(OUTPUT_DIR, "small_patch_490kp_advection")
-INTERACTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_p0.55_interactions")
-PLOTS_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_p0.55_plots")
+ADVECTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_advection")
+INTERACTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_p0.9_interactions")
+PLOTS_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_p0.9_plots")
 
 for dir in [OUTPUT_ROOT_DIR, ADVECTION_OUTPUT_DIR, INTERACTION_OUTPUT_DIR, PLOTS_OUTPUT_DIR]:
     if not os.path.exists(dir):
@@ -21,36 +21,38 @@ for dir in [OUTPUT_ROOT_DIR, ADVECTION_OUTPUT_DIR, INTERACTION_OUTPUT_DIR, PLOTS
 DOMAIN_LONS = slice(-180, -120)
 DOMAIN_LATS = slice(60, 0)
 
-# Square inside which we regularly place microbes.
+Tx, Ty = 4, 7  # number of "tiles" in the x and y.
+
+# Big patch (debug 2.8kp)
 # lon_min, lon_max = -170, -130
 # lat_min, lat_max = 10, 50
+# NTx, NTy = 10, 10  # number of microbes in each tile (x and y directions)
+# n_periods = 3 # number of periods to advect microbes for
+# INTERACTION_LENGTH_SCALE = 0.5  # [deg]
+# MICROBE_MARKER_SIZE = 40
+
+# Small patch (490kp)
 lon_min, lon_max = -155, -145
 lat_min, lat_max = 25, 35
-
-Tx, Ty = 4, 7  # number of "tiles" in the x and y.
 NTx, NTy = 175, 100  # number of microbes in each tile (x and y directions)
+n_periods = 72 # number of periods to advect microbes for
+INTERACTION_LENGTH_SCALE = 0.08  # [deg]
+MICROBE_MARKER_SIZE = 1
+
 N = Tx*Ty*NTx*NTy  # number of microbes
+
+delta_mlon = (lon_max - lon_min) / (Tx * NTx)
+delta_mlat = (lat_max - lat_min) / (Ty * NTy)
 
 t = datetime(2017, 1, 1)  # initial time
 dt = timedelta(hours=1)  # advection time step
 tpd = int(timedelta(days=1) / dt)   # time steps per day
 
-# number of periods to advect microbes for
-# n_periods = 3
-n_periods = 72
-
 # Interaction parameters
-# INTERACTION_LENGTH_SCALE = 0.5  # [deg]
-INTERACTION_LENGTH_SCALE = 0.005  # [deg]
-
 INTERACTION_NORM = 2
 INTERACTION_p = 0.9
-
 
 # Plotting constants
 ROCK_COLOR = "red"
 PAPER_COLOR = "limegreen"
 SCISSOR_COLOR = "blue"
-
-# MICROBE_MARKER_SIZE = 1
-MICROBE_MARKER_SIZE = 40

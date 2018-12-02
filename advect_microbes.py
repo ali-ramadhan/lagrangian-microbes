@@ -12,6 +12,7 @@ from constants import ADVECTION_OUTPUT_DIR
 from constants import DOMAIN_LONS, DOMAIN_LATS
 from constants import lon_min, lon_max, lat_min, lat_max
 from constants import N, Tx, Ty, NTx, NTy
+from constants import delta_mlon, delta_mlat
 from constants import t, dt, tpd, n_periods
 from utils import closest_hour
 
@@ -100,15 +101,15 @@ def advect_microbes(jid, mlons, mlats):
         #         pset.remove(i)
 
 if __name__ == "__main__":
+    print("Number of microbes: {:d}".format(N))
+    print("Δlon={:3g}, Δlat={:3g}".format(delta_mlon, delta_mlat))
+    print("Found {:d} CPUs.".format(joblib.cpu_count()))
+
     mlon_blocks = Tx*Ty * [None]
     mlat_blocks = Tx*Ty * [None]
 
-    delta_lon = (lon_max - lon_min) / (Tx * NTx)
-    delta_lat = (lat_max - lat_min) / (Ty * NTy)
-
-    print("Number of microbes: {:d}".format(N))
-    print("Δlon={:3g}, Δlat={:3g}".format(delta_lon, delta_lat))
-    print("Found {:d} CPUs.".format(joblib.cpu_count()))
+    delta_lon = (lon_max - lon_min) / Tx
+    delta_lat = (lat_max - lat_min) / Ty
 
     for i in range(Tx):
         for j in range(Ty):
@@ -117,11 +118,11 @@ if __name__ == "__main__":
             mlat_min = lat_min + j*delta_lat
             mlat_max = lat_min + (j+1)*delta_lat
 
-            # print("(Tx={:d}, Ty={:d}) {:.2f}-{:.2f} E, {:.2f}-{:.2f} N".format(i, j, mlon_min, mlon_max, mlat_min, mlat_max))
-            # print("(i,j,i*Ty+j) = ({:d},{:d},{:d})".format(i, j, i*Ty+j))
+            print("(Tx={:d}, Ty={:d}) {:.2f}-{:.2f} E, {:.2f}-{:.2f} N".format(i, j, mlon_min, mlon_max, mlat_min, mlat_max))
+            print("(i,j,i*Ty+j) = ({:d},{:d},{:d})".format(i, j, i*Ty+j))
 
             # Microbe longitudes and latitudes
-            mlon_blocks[i*Ty + j] = np.repeat(np.linspace(mlon_min, mlon_max, NTx), NTy)
-            mlat_blocks[i*Ty + j] = np.tile(np.linspace(mlat_min, mlat_max, NTy), NTx)
+            mlon_blocks[i*Ty + j] = np.repeat(np.linspace(mlon_min, mlon_max - delta_mlon, NTx), NTy)
+            mlat_blocks[i*Ty + j] = np.tile(np.linspace(mlat_min, mlat_max - delta_mlat, NTy), NTx)
 
     joblib.Parallel(n_jobs=-1)(joblib.delayed(advect_microbes)(jid, mlon_blocks[jid], mlat_blocks[jid]) for jid in range(Tx*Ty))

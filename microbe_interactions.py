@@ -139,17 +139,17 @@ for period in range(n_periods):
                 winner = None
 
                 if s1 == "rock" and s2 == "scissors":
-                    winner = s1 if r < pRS else s2
+                    winner = p1 if r < pRS else p2
                 elif s1 == "rock" and s2 == "paper":
-                    winner = s2 if r < pPR else s1
+                    winner = p2 if r < pPR else p1
                 elif s1 == "paper" and s2 == "rock":
-                    winner = s1 if r < pPR else s2
+                    winner = p1 if r < pPR else p2
                 elif s1 == "paper" and s2 == "scissors":
-                    winner = s2 if r < pSP else s1
+                    winner = p2 if r < pSP else p1
                 elif s1 == "scissors" and s2 == "rock":
-                    winner = s2 if r < pRS else s1
+                    winner = p2 if r < pRS else p1
                 elif s1 == "scissors" and s2 == "paper":
-                    winner = s1 if r < pSP else s2
+                    winner = p1 if r < pSP else p2
 
                 if winner == p1:
                     microbe_species[p2] = microbe_species[p1]

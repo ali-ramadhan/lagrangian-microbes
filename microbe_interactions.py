@@ -13,13 +13,15 @@ from constants import ADVECTION_OUTPUT_DIR, INTERACTION_OUTPUT_DIR
 from constants import N, Tx, Ty, NTx, NTy
 from constants import delta_mlat, delta_mlon
 from constants import t, dt, tpd, n_periods
-from constants import INTERACTION_LENGTH_SCALE, INTERACTION_NORM, INTERACTION_p
+from constants import INTERACTION_LENGTH_SCALE, INTERACTION_NORM
+from constants import INTERACTION_pRS, INTERACTION_pPR, INTERACTION_pSP
 from utils import runtime2str
 
-prob = INTERACTION_p
+pRS, pPR, pSP = INTERACTION_pRS, INTERACTION_pPR, INTERACTION_pSP
 
 print("Microbe Δlon={:3g}, Δlat={:3g}".format(delta_mlon, delta_mlat))
-print("Interaction: length_scale={:g}, norm={:d}, p={:.2f}".format(INTERACTION_LENGTH_SCALE, INTERACTION_NORM, INTERACTION_p))
+print("Interaction: length_scale={:g}, norm={:d}, pRS={:.2f}, pPR={:.2f}, pSP={:.2f}"
+    .format(INTERACTION_LENGTH_SCALE, INTERACTION_NORM, INTERACTION_pRS, INTERACTION_pPR, INTERACTION_pSP))
 
 def rps_type(n):
     if n == 1:
@@ -136,32 +138,18 @@ for period in range(n_periods):
 
                 winner = None
 
-                if r < prob:  # Forward interaction
-                    if s1 == "rock" and s2 == "scissors":
-                        winner = p1
-                    elif s1 == "rock" and s2 == "paper":
-                        winner = p2
-                    elif s1 == "paper" and s2 == "rock":
-                        winner = p1
-                    elif s1 == "paper" and s2 == "scissors":
-                        winner = p2
-                    elif s1 == "scissors" and s2 == "rock":
-                        winner = p2
-                    elif s1 == "scissors" and s2 == "paper":
-                        winner = p1
-                elif r > prob:  # Reverse interaction
-                    if s1 == "rock" and s2 == "scissors":
-                        winner = p2
-                    elif s1 == "rock" and s2 == "paper":
-                        winner = p1
-                    elif s1 == "paper" and s2 == "rock":
-                        winner = p2
-                    elif s1 == "paper" and s2 == "scissors":
-                        winner = p1
-                    elif s1 == "scissors" and s2 == "rock":
-                        winner = p1
-                    elif s1 == "scissors" and s2 == "paper":
-                        winner = p2
+                if s1 == "rock" and s2 == "scissors":
+                    winner = s1 if r < pRS else s2
+                elif s1 == "rock" and s2 == "paper":
+                    winner = s2 if r < pPR else s1
+                elif s1 == "paper" and s2 == "rock":
+                    winner = s1 if r < pPR else s2
+                elif s1 == "paper" and s2 == "scissors":
+                    winner = s2 if r < pSP else s1
+                elif s1 == "scissors" and s2 == "rock":
+                    winner = s2 if r < pRS else s1
+                elif s1 == "scissors" and s2 == "paper":
+                    winner = s1 if r < pSP else s2
 
                 if winner == p1:
                     microbe_species[p2] = microbe_species[p1]

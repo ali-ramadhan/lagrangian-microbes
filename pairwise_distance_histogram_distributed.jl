@@ -58,7 +58,7 @@ end
     sub_hist = zeros(Int, bins)
     
     for j in (i+1):N
-        bin = round(Int8, 10.0f0 * log10(haversine_distance32(lats[i], lons[i], lats[j], lons[j], R)))
+        bin = round(Int8, 10.0f0 * log10(max(1, haversine_distance32(lats[i], lons[i], lats[j], lons[j], R))))
         @inbounds sub_hist[bin] += 1
     end
     
@@ -174,7 +174,7 @@ end
 rps_fpath(p,h) = "/home/alir/nobackup/lagrangian_microbe_output/small_patch_490kp_p0.9_interactions/rps_microbe_species_p" * lpad(string(p), 4, "0") * "_h" * lpad(string(h), 3, "0") * ".pickle"
 
 function plot_multiple_pairwise_histogram()
-    for p in 0:15
-        plot_pairwise_histogram(rps_fpath(5*p, 0), 70)
+    for h in 2:24
+        plot_pairwise_histogram(rps_fpath(0, 5*h), 70)
     end
 end

@@ -165,16 +165,18 @@ function plot_pairwise_histogram(pickle_fpath, bins)
     
     PyPlot.legend()
 
-    png_fpath = split(pickle_fpath, "/")[end] * ".png"
+    png_fpath = pickle_fpath * ".png"
     @printf("Saving pairwise distance histogram figure: %s\n", png_fpath)
     PyPlot.savefig(png_fpath, dpi=300, format="png", transparent=false)
     PyPlot.close("all")
 end
 
-rps_fpath(p,h) = "/home/alir/nobackup/lagrangian_microbe_output/small_patch_490kp_p0.9_interactions/rps_microbe_species_p" * lpad(string(p), 4, "0") * "_h" * lpad(string(h), 3, "0") * ".pickle"
+# rps_fpath(p,h) = "/home/alir/nobackup/lagrangian_microbe_output/small_patch_490kp_p0.9_interactions/rps_microbe_species_p" * lpad(string(p), 4, "0") * "_h" * lpad(string(h), 3, "0") * ".pickle"
+# rps_fpath(p,h) = "/home/alir/nobackup/lagrangian_microbe_output/small_patch_490kp_p0.55_interactions/rps_microbe_species_p" * lpad(string(p), 4, "0") * "_h" * lpad(string(h), 3, "0") * ".pickle"
+rps_fpath(p,h) = "/home/alir/nobackup/lagrangian_microbe_output/small_patch_490kp_pRS0.51_interactions/rps_microbe_species_p" * lpad(string(p), 4, "0") * "_h" * lpad(string(h), 3, "0") * ".pickle"
 
 function plot_multiple_pairwise_histogram()
-    for h in 2:24
-        plot_pairwise_histogram(rps_fpath(0, 5*h), 70)
+    for p in 1:6
+        plot_pairwise_histogram(rps_fpath(6*p, 0), 70)
     end
 end

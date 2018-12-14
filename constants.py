@@ -14,17 +14,17 @@ ROCK, PAPER, SCISSORS = 1, 2, 3
 
 OUTPUT_ROOT_DIR = os.path.join("/home", "alir", "nobackup", "lagrangian_microbe_output")
 
-# ADVECTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "debug_2.8kp_advection")
-# INTERACTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "debug_2.8kp_p0.9_interactions")
-# PLOTS_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "debug_2.8kp_p0.9_plots")
+ADVECTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "debug_2.8kp_advection")
+INTERACTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "debug_2.8kp_p0.9_interactions")
+PLOTS_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "debug_2.8kp_p0.9_plots")
 
-ADVECTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_advection")
+# ADVECTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_advection")
 # INTERACTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_p0.9_interactions")
 # PLOTS_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_p0.9_plots")
 # INTERACTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_p0.55_interactions")
 # PLOTS_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_p0.55_plots")
-INTERACTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_pRS0.51_interactions")
-PLOTS_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_pRS0.51_plots")
+# INTERACTION_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_pRS0.51_interactions")
+# PLOTS_OUTPUT_DIR = os.path.join(OUTPUT_ROOT_DIR, "small_patch_490kp_pRS0.51_plots")
 
 # Create directories if they don't already exist.
 for dir in [OUTPUT_ROOT_DIR, ADVECTION_OUTPUT_DIR, INTERACTION_OUTPUT_DIR, PLOTS_OUTPUT_DIR]:
@@ -41,20 +41,20 @@ DOMAIN_LATS = slice(60, 0)
 Tx, Ty = 4, 7
 
 # Big patch (debug 2.8kp)
-# lon_min, lon_max = -170, -130
-# lat_min, lat_max = 10, 50
-# NTx, NTy = 10, 10  # number of microbes in each tile (x and y directions)
-# n_periods = 3 # number of periods to advect microbes for
-# INTERACTION_LENGTH_SCALE = 0.5  # [deg]
-# MICROBE_MARKER_SIZE = 40
+lon_min, lon_max = -170, -130
+lat_min, lat_max = 10, 50
+NTx, NTy = 10, 10  # number of microbes in each tile (x and y directions)
+n_periods = 3 # number of periods to advect microbes for
+INTERACTION_LENGTH_SCALE = 0.5  # [deg]
+MICROBE_MARKER_SIZE = 40
 
 # Small patch (490kp)
-lon_min, lon_max = -155, -145
-lat_min, lat_max = 25, 35
-NTx, NTy = 175, 100  # number of microbes in each tile (x and y directions)
-n_periods = 72 # number of periods to advect microbes for
-INTERACTION_LENGTH_SCALE = 0.01  # [deg]
-MICROBE_MARKER_SIZE = 1
+# lon_min, lon_max = -155, -145
+# lat_min, lat_max = 25, 35
+# NTx, NTy = 175, 100  # number of microbes in each tile (x and y directions)
+# n_periods = 72 # number of periods to advect microbes for
+# INTERACTION_LENGTH_SCALE = 0.01  # [deg]
+# MICROBE_MARKER_SIZE = 1
 
 N = Tx*Ty*NTx*NTy  # Total number of microbes.
 

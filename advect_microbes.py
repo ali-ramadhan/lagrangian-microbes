@@ -118,8 +118,8 @@ if __name__ == "__main__":
             mlat_min = lat_min + j*delta_lat
             mlat_max = lat_min + (j+1)*delta_lat
 
-            print("(Tx={:d}, Ty={:d}) {:.2f}-{:.2f} E, {:.2f}-{:.2f} N".format(i, j, mlon_min, mlon_max, mlat_min, mlat_max))
-            print("(i,j,i*Ty+j) = ({:d},{:d},{:d})".format(i, j, i*Ty+j))
+            # print("(Tx={:d}, Ty={:d}) {:.2f}-{:.2f} E, {:.2f}-{:.2f} N".format(i, j, mlon_min, mlon_max, mlat_min, mlat_max))
+            # print("(i,j,i*Ty+j) = ({:d},{:d},{:d})".format(i, j, i*Ty+j))
 
             # Microbe longitudes and latitudes
             mlon_blocks[i*Ty + j] = np.repeat(np.linspace(mlon_min, mlon_max - delta_mlon, NTx), NTy)

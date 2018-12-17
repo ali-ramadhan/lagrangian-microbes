@@ -112,5 +112,4 @@ parcels_examples/
 # Output data
 *.nc
 *.pickle
-*.png
 *.mp4

@@ -63,6 +63,11 @@ def distribute_particles_across_tiles(particle_lons, particle_lats, tiles):
     return particle_lons_tiled, particle_lats_tiled
 
 
+def oscar_dataset_opendap_url(year):
+    return r"https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/oscar/preview/L4/oscar_third_deg/oscar_vel" \
+           + str(year) + ".nc.gz"
+
+
 class ParticleAdvecter:
     def __init__(
         self,
@@ -149,19 +154,20 @@ class ParticleAdvecter:
         self.particle_lons = particle_lons
         self.particle_lats = particle_lats
 
-    def oscar_dataset_filepath(self):
-        fp = os.path.join(self.oscar_dataset_dir, "oscar_vel" + str(self.time.year) + "_180.nc")
-        assert os.path.isfile(fp), "OSCAR dataset {:s} could not be found (or is not a file).".format(fp)
-        return fp
+        self.dt = dt
+        self.domain_lats = domain_lats
+        self.domain_lons = domain_lons
+        self.start_time = start_time
+        self.end_time = end_time
 
     def time_step(self, Nt, dt):
         if self.N_procs == 1:
-            self.time_step_tile(0, self.lons[0], self.lats[0])
+            self.time_step_tile(0)
         else:
             joblib.Parallel(n_jobs=self.N_procs)(
-                joblib.delayed(self.time_step_tile)(tile_id, self.lons[tile_id], self.lats[tile_id])
-                for tile_id in range(self.Tx * self.Ty)
+                joblib.delayed(self.time_step_tile)(tile_id) for tile_id in range(self.N_procs)
             )
 
-    def time_step_tile(self, Nt, dt):
-        pass
+    def time_step_tile(self, tile_id):
+        velocity_dataset = xr.open_dataset(velocity_dataset_filepath)
+        n_fields = len(velocity_dataset["time"])

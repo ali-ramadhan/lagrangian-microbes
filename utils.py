@@ -6,7 +6,7 @@ from numpy import sqrt, abs, argmin
 
 def factor(n):
     """
-    Calculates the integer factors of n.
+    Calculates the integer factors of n. Code credit: https://rosettacode.org/wiki/Factors_of_an_integer#Python
 
     Args:
         n: integer to be factored.
@@ -24,7 +24,9 @@ def factor(n):
 
 def most_symmetric_integer_factorization(N):
     """
-    Calculates the "most symmetric" integer factorization of N. This is the closest two integer factors of N.
+    Calculates the "most symmetric" integer factorization of N. This is the closest two integer factors of N. If N is
+    a square number, the integer factorization is "symmetric" and (sqrt(N), sqrt(N)) is the most "symmetric"
+    factorization.
 
     Args:
         N: Integer

@@ -12,6 +12,45 @@ logging.config.fileConfig("logging.ini")
 logger = logging.getLogger(__name__)
 
 
+def generate_uniform_particle_locations(particles_per_tile=1,
+                                        Tx=1,
+                                        Ty=1,
+                                        lat_min_particle=10,
+                                        lat_max_particle=50,
+                                        lon_min_particle=-170,
+                                        lon_max_particle=-130
+                                        ):
+    particle_lons = Tx * Ty * [None]
+    particle_lats = Tx * Ty * [None]
+
+    # The (lat, lon) spacing between each tile.
+    delta_lon_tile = (lon_max_particle - lon_min_particle) / Tx
+    delta_lat_tile = (lat_max_particle - lat_min_particle) / Ty
+    logger.debug("Tile spacing: delta_lat_tile={:.2f}, delta_lon_tile={:.2f}°"
+                 .format(delta_lat_tile, delta_lon_tile))
+
+    # Number of uniformly spaced particles in each direction per tile.
+    NTx = particles_per_tile // Tx
+    NTy = particles_per_tile // Ty
+
+    for i, j in product(range(Tx), range(Ty)):
+        # Calculate the (lat, lon) bounding box for each tile.
+        lon_min_tile = lon_min_particle + i * delta_lon_tile
+        lon_max_tile = lon_min_particle + (i + 1) * delta_lon_tile
+        lat_min_tile = lat_min_particle + j * delta_lat_tile
+        lat_max_tile = lat_min_particle + (j + 1) * delta_lat_tile
+
+        logger.debug("Tile (i,j,i*Ty+j) = ({:d},{:d},{:d})".format(i, j, i * Ty + j))
+        logger.debug("Tile (Tx={:d}, Ty={:d}): {:.2f}-{:.2f} °E, {:.2f}-{:.2f} °N"
+                     .format(i, j, lon_min_tile, lon_max_tile, lat_min_tile, lat_max_tile))
+
+        # Generate NTx*NTy uniformly spaced (lat, lon) locations in the tile, and store them.
+        particle_lons[i * Ty + j] = np.repeat(np.linspace(lon_min_tile, lon_max_tile - delta_lon_tile, NTx), NTy)
+        particle_lats[i * Ty + j] = np.tile(np.linspace(lat_min_tile, lat_max_tile - delta_lat_tile, NTy), NTx)
+
+    return particle_lats, particle_lons
+
+
 class ParticleAdvecter:
     def __init__(
         self,
@@ -28,8 +67,6 @@ class ParticleAdvecter:
         lat_max_particle=50,
         lon_min_particle=-170,
         lon_max_particle=-130,
-        delta_lat_particle=1,
-        delta_lon_particle=1,
         oscar_dataset_dir=".",
         domain_lats=slice(60, 0),
         domain_lons=slice(-180, -120),
@@ -50,12 +87,6 @@ class ParticleAdvecter:
         # Sanitize N_particles input.
         assert 1 <= N_particles, "N_particles must be a positive integer."
         logger.info("Number of Lagrangian particles: {:d}".format(N_particles))
-
-        # Sanitize Lagrangian particle spacing inputs.
-        assert 0 < delta_lat_particle, "delta_lat_particle must be a positive number."
-        assert 0 < delta_lon_particle, "delta_lon_particle must be a positive number."
-        logger.info("Lagrangian particle spacing: delta_lat={:.3f}°, delta_lon={:.3f}°"
-                    .format(delta_lat_particle, delta_lon_particle))
 
         # Figure out the number of parallelization tiles to use.
         assert 1 <= Tx or Tx == -1, "Number of tiles Tx must be a positive integer or -1 (choose automatically)."
@@ -107,41 +138,21 @@ class ParticleAdvecter:
         logger.info("Generating locations for {:d} Lagrangian particles across {:d} tiles..."
                     .format(N_particles, Tx*Ty))
 
-        # Create a storage space for particle locations on each tile.
-        particle_lons = Tx * Ty * [None]
-        particle_lats = Tx * Ty * [None]
-
-        # The (lat, lon) spacing between each tile.
-        delta_lon_tile = (lon_max_particle - lon_min_particle) / Tx
-        delta_lat_tile = (lat_max_particle - lat_min_particle) / Ty
-        logger.debug("Tile spacing: delta_lat_tile={:.2f}, delta_lon_tile={:.2f}°"
-                     .format(delta_lat_tile, delta_lon_tile))
-
-        # Number of uniformly spaced particles in each direction per tile.
-        NTx = particles_per_tile // Tx
-        NTy = particles_per_tile // Ty
-
-        for i, j in product(range(Tx), range(Ty)):
-            # Calculate the (lat, lon) bounding box for each tile.
-            lon_min_tile = lon_min_particle + i*delta_lon_tile
-            lon_max_tile = lon_min_particle + (i+1)*delta_lon_tile
-            lat_min_tile = lat_min_particle + j*delta_lat_tile
-            lat_max_tile = lat_min_particle + (j+1)*delta_lat_tile
-
-            logger.debug("Tile (i,j,i*Ty+j) = ({:d},{:d},{:d})".format(i, j, i * Ty + j))
-            logger.debug("Tile (Tx={:d}, Ty={:d}): {:.2f}-{:.2f} °E, {:.2f}-{:.2f} °N"
-                         .format(i, j, lon_min_tile, lon_max_tile, lat_min_tile, lat_max_tile))
-
-            # Generate NTx*NTy uniformly spaced (lat, lon) locations in the tile, and store them.
-            particle_lons[i*Ty + j] = np.repeat(np.linspace(lon_min_tile, lon_max_tile - delta_lon_tile, NTx), NTy)
-            particle_lats[i*Ty + j] = np.tile(np.linspace(lat_min_tile, lat_max_tile - delta_lat_tile, NTy), NTx)
+        # Generate initial locations for each particle.
+        if particle_initial_distribution == "uniform":
+            particle_lons, particle_lats = generate_uniform_particle_locations(particles_per_tile=particles_per_tile,
+                                                                               Tx=Tx, Ty=Ty,
+                                                                               lat_min_particle=lat_min_particle,
+                                                                               lat_max_particle=lat_max_particle,
+                                                                               lon_min_particle=lon_min_particle,
+                                                                               lon_max_particle=lon_max_particle)
+        else:
+            raise ValueError
 
         self.velocity_field = velocity_field
         self.particle_initial_distribution = particle_initial_distribution
         self.N_procs = N_procs
         self.N_particles = N_particles
-        self.delta_lat_particle = delta_lat_particle
-        self.delta_lon_particle = delta_lon_particle
         self.Tx = Tx
         self.Ty = Ty
         self.output_dir = output_dir

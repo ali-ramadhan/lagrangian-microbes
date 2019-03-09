@@ -22,8 +22,10 @@ from constants import ROCK_COLOR, PAPER_COLOR, SCISSOR_COLOR, MICROBE_MARKER_SIZ
 from constants import N, t, dt, tpd, n_periods
 from utils import closest_hour
 
+INTERACTION_OUTPUT_DIR = "/home/gridsan/aramadhan/microbes_output/"
+PLOTS_OUTPUT_DIR = INTERACTION_OUTPUT_DIR
 
-velocity_dataset_filepath = '/home/alir/nobackup/data/oscar_third_deg_180/oscar_vel2017_180.nc'
+velocity_dataset_filepath = r"https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/oscar/preview/L4/oscar_third_deg/oscar_vel2017.nc.gz"
 velocity_dataset = xr.open_dataset(velocity_dataset_filepath)
 
 t_starts = n_periods * [None]
@@ -37,7 +39,7 @@ for period in range(n_periods):
     depth_float = velocity_dataset["depth"].values[0]
 
     velocity_subdataset = velocity_dataset.sel(time=t_start, year=year_float, depth=depth_float,
-        latitude=slice(60, 0), longitude=slice(-180, -120))
+        latitude=slice(60, 0), longitude=slice(180, 240))
 
     # Grid longitudes and latitudes.
     glons = velocity_subdataset['longitude'].values
@@ -145,6 +147,6 @@ if __name__ == "__main__":
     interaction_files = glob.glob(INTERACTION_OUTPUT_DIR + "/rps_microbe_species*.pickle")
     print("{:d} files found.".format(len(interaction_files)))
 
-    joblib.Parallel(n_jobs=-1)(joblib.delayed(plot_microbe_warfare_frame)(f) for f in interaction_files)
+    joblib.Parallel(n_jobs=4)(joblib.delayed(plot_microbe_warfare_frame)(f) for f in interaction_files)
     
     renumber_files()

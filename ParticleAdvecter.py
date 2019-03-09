@@ -81,11 +81,9 @@ class ParticleAdvecter:
         N_procs=-1,
         lat_min_particle=25,
         lat_max_particle=35,
-        lon_min_particle=155,
-        lon_max_particle=165,
+        lon_min_particle=210,
+        lon_max_particle=220,
         oscar_dataset_dir=".",
-        domain_lats=slice(60, 0),
-        domain_lons=slice(150, 170),
         start_time=datetime(2017, 1, 1),
         end_time=datetime(2018, 1, 1),
         output_dir="."
@@ -158,8 +156,6 @@ class ParticleAdvecter:
         self.particle_lats = particle_lats
 
         self.dt = dt
-        self.domain_lats = domain_lats
-        self.domain_lons = domain_lons
         self.start_time = start_time
         self.end_time = end_time
 
@@ -178,8 +174,10 @@ class ParticleAdvecter:
 
         dt = self.dt
 
+        tilestamp = "[Tile {:02d}]".format(tile_id)
+
         oscar_url = oscar_dataset_opendap_url(self.start_time.year)
-        logger.info("[Tile {:02d}] Accessing OSCAR dataset over OPeNDAP: {:s}".format(tile_id, oscar_url))
+        logger.info("{:s} Accessing OSCAR dataset over OPeNDAP: {:s}".format(tilestamp, oscar_url))
 
         velocity_dataset = xr.open_dataset(oscar_url)
         n_fields = len(velocity_dataset["time"])
@@ -219,13 +217,13 @@ class ParticleAdvecter:
 
             fieldset = parcels.fieldset.FieldSet(u_field, v_field)
 
-            pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.ScipyParticle, lon=mlons, lat=mlats)
+            pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle, lon=mlons, lat=mlats)
             # depth=depth_float*np.ones(particles_per_tile)
 
             dump_filename = "particle_locations_p" + str(period).zfill(4) + "_tile" + str(tile_id).zfill(2) + ".pickle"
             dump_filepath = os.path.join(self.output_dir, dump_filename)
 
-            logger.info("[Tile {:02d}] Advecting: {:} -> {:}...".format(tile_id, t_start_ch, t_end_ch))
+            logger.info("{:s} Advecting: {:} -> {:}...".format(tilestamp, t_start_ch, t_end_ch))
 
             latlon_store = {
                 "hours": advection_hours,
@@ -237,20 +235,21 @@ class ParticleAdvecter:
             for h in range(advection_hours):
                 pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
 
-                # for i, p in enumerate(pset):
-                #     latlon_store["lon"][h, i] = p.lon
-                #     latlon_store["lat"][h, i] = p.lat
+                for i, p in enumerate(pset):
+                    latlon_store["lon"][h, i] = p.lon
+                    latlon_store["lat"][h, i] = p.lat
 
-            # with open(dump_filepath, "wb") as f:
-            #     joblib.dump(latlon_store, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
-            #
-            # # Create new mlon and mlat lists to create new particle set.
-            # n_particles = len(pset)
-            # mlons = np.zeros(n_particles)
-            # mlats = np.zeros(n_particles)
-            # for i, p in enumerate(pset):
-            #     mlons[i] = p.lon
-            #     mlats[i] = p.lat
+            with open(dump_filepath, "wb") as f:
+                logger.info("{:s} Saving intermediate output: {:s}".format(tilestamp, dump_filepath))
+                joblib.dump(latlon_store, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
+
+            # Create new mlon and mlat lists to create new particle set.
+            n_particles = len(pset)
+            mlons = np.zeros(n_particles)
+            mlats = np.zeros(n_particles)
+            for i, p in enumerate(pset):
+                mlons[i] = p.lon
+                mlats[i] = p.lat
 
             toc = time.time()
-            logger.info("[{:02d}] Advection and dumping took {:}.".format(tile_id, pretty_time(toc - tic)))
+            logger.info("{:s} Advection and dumping took {:s}.".format(tilestamp, pretty_time(toc - tic)))

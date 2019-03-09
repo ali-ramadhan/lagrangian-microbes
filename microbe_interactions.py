@@ -16,9 +16,12 @@ from constants import delta_mlat, delta_mlon
 from constants import t, dt, tpd, n_periods
 from constants import INTERACTION_LENGTH_SCALE, INTERACTION_NORM
 from constants import INTERACTION_pRS, INTERACTION_pPR, INTERACTION_pSP
-from utils import runtime2str
+from utils import pretty_time
 
 pRS, pPR, pSP = INTERACTION_pRS, INTERACTION_pPR, INTERACTION_pSP
+
+ADVECTION_OUTPUT_DIR = "/home/gridsan/aramadhan/microbes_output/"
+INTERACTION_OUTPUT_DIR = ADVECTION_OUTPUT_DIR
 
 print("Microbe Δlon={:3g}, Δlat={:3g}".format(delta_mlon, delta_mlat))
 print("Interaction: length_scale={:g}, norm={:d}, pRS={:.2f}, pPR={:.2f}, pSP={:.2f}"
@@ -75,7 +78,7 @@ if __name__ == "__main__":
         t1 = time.time()
 
         for block in range(Tx*Ty):
-            dump_filename = "rps_microbe_locations_p" + str(period).zfill(4) + "_block" + str(block).zfill(2) + ".joblib.pickle"
+            dump_filename = "particle_locations_p" + str(period).zfill(4) + "_tile" + str(block).zfill(2) + ".pickle"
             dump_filepath = os.path.join(ADVECTION_OUTPUT_DIR, dump_filename)
             latlon_store = joblib.load(dump_filepath)
 
@@ -90,7 +93,7 @@ if __name__ == "__main__":
             lats[:, i1:i2] = latlon_store["lat"]
 
         t2 = time.time()
-        print("({:}) ".format(runtime2str(t2 - t1)))
+        print("({:}) ".format(pretty_time(t2 - t1)))
 
         for h in range(hours):
             print("{:} ".format(t), end="")
@@ -108,13 +111,13 @@ if __name__ == "__main__":
             t1 = time.time()
             kd = cKDTree(np.array(microbe_locations))
             t2 = time.time()
-            print("({:}) ".format(runtime2str(t2 - t1)), end="")
+            print("({:}) ".format(pretty_time(t2 - t1)), end="")
 
             print("Querying pairs... ", end="")
             t1 = time.time()
             microbe_pairs = kd.query_pairs(r=INTERACTION_LENGTH_SCALE, p=INTERACTION_NORM)
             t2 = time.time()
-            print("({:}) ".format(runtime2str(t2 - t1)), end="")
+            print("({:}) ".format(pretty_time(t2 - t1)), end="")
 
             print(" {:d} pairs. ".format(len(microbe_pairs)), end="")
 
@@ -160,7 +163,7 @@ if __name__ == "__main__":
                     n_battles += 1
 
             t2 = time.time()
-            print("{:d} battles. ({:})".format(n_battles, runtime2str(t2 - t1)))
+            print("{:d} battles. ({:})".format(n_battles, pretty_time(t2 - t1)))
 
             pickle_fname = "rps_microbe_species_p" + str(period).zfill(4) + "_h" + str(h).zfill(3) + ".pickle"
             pickle_fpath = os.path.join(INTERACTION_OUTPUT_DIR, pickle_fname)

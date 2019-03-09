@@ -54,12 +54,14 @@ def closest_hour(ndt):
     return pdt
 
 
-def runtime2str(t):
+def pretty_time(t):
     if t < 1e-6:
         return "{:.3g} ns".format(t * 1e9)
     elif 1e-6 <= t < 1e-3:
         return "{:.3g} μs".format(t * 1e6)
-    elif 1e-3 < t < 1:
+    elif 1e-3 <= t < 1:
         return "{:.3g} ms".format(t * 1e3)
-    else:
+    elif 1 <= t < 60:
         return "{:.3g} s".format(t)
+    else:
+        return "{:.3g} mins".format(t / 60)

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from itertools import product
 
 import numpy as np
+from numpy import linspace, repeat, tile
 import joblib
 
 # Configure logger first before importing any sub-module that depend on the logger being already configured.
@@ -11,44 +12,55 @@ import logging.config
 logging.config.fileConfig("logging.ini")
 logger = logging.getLogger(__name__)
 
+from utils import most_symmetric_integer_factorization
 
-def generate_uniform_particle_locations(particles_per_tile=1,
-                                        Tx=1,
-                                        Ty=1,
-                                        lat_min_particle=10,
-                                        lat_max_particle=50,
-                                        lon_min_particle=-170,
-                                        lon_max_particle=-130
+
+def generate_uniform_particle_locations(N_particles=1,
+                                        lat_min_particles=10,
+                                        lat_max_particles=50,
+                                        lon_min_particles=-170,
+                                        lon_max_particles=-130
                                         ):
-    particle_lons = Tx * Ty * [None]
-    particle_lats = Tx * Ty * [None]
+    # Determine number of particles to generate along each dimension.
+    N_particles_lat, N_particles_lon = most_symmetric_integer_factorization(N_particles)
 
-    # The (lat, lon) spacing between each tile.
-    delta_lon_tile = (lon_max_particle - lon_min_particle) / Tx
-    delta_lat_tile = (lat_max_particle - lat_min_particle) / Ty
-    logger.debug("Tile spacing: delta_lat_tile={:.2f}, delta_lon_tile={:.2f}°"
-                 .format(delta_lat_tile, delta_lon_tile))
+    logger.info("Generating ({:d},{:d}) particles along each (lat, lon).".format(N_particles_lat, N_particles_lon))
 
-    # Number of uniformly spaced particles in each direction per tile.
-    NTx = particles_per_tile // Tx
-    NTy = particles_per_tile // Ty
-
-    for i, j in product(range(Tx), range(Ty)):
-        # Calculate the (lat, lon) bounding box for each tile.
-        lon_min_tile = lon_min_particle + i * delta_lon_tile
-        lon_max_tile = lon_min_particle + (i + 1) * delta_lon_tile
-        lat_min_tile = lat_min_particle + j * delta_lat_tile
-        lat_max_tile = lat_min_particle + (j + 1) * delta_lat_tile
-
-        logger.debug("Tile (i,j,i*Ty+j) = ({:d},{:d},{:d})".format(i, j, i * Ty + j))
-        logger.debug("Tile (Tx={:d}, Ty={:d}): {:.2f}-{:.2f} °E, {:.2f}-{:.2f} °N"
-                     .format(i, j, lon_min_tile, lon_max_tile, lat_min_tile, lat_max_tile))
-
-        # Generate NTx*NTy uniformly spaced (lat, lon) locations in the tile, and store them.
-        particle_lons[i * Ty + j] = np.repeat(np.linspace(lon_min_tile, lon_max_tile - delta_lon_tile, NTx), NTy)
-        particle_lats[i * Ty + j] = np.tile(np.linspace(lat_min_tile, lat_max_tile - delta_lat_tile, NTy), NTx)
+    particle_lons = repeat(linspace(lon_min_particles, lon_max_particles, N_particles_lon), N_particles_lat)
+    particle_lats = tile(linspace(lat_min_particles, lat_max_particles, N_particles_lat), N_particles_lon)
 
     return particle_lats, particle_lons
+
+
+def distribute_particles_across_tiles(particle_lons, particle_lats, tiles):
+    """
+    Splits a list of particle longitudes and a list of particle latitudes into `tiles` equally sized lists.
+
+    Args:
+        particle_lons: List of particle longitudes.
+        particle_lats: List of particle latitudes.
+        tiles: Number of tiles or processors to split the particles into.
+
+    Returns:
+        particle_lons_tiled: A List containing `tiles` lists of particle longitudes for each processor.
+        particle_lats_tiled: A List containing `tiles` lists of particle latitudes for each processor.
+
+    """
+    assert particle_lons.size == particle_lats.size
+    N_particles = particle_lons.size
+
+    assert (N_particles / tiles).is_integer()
+    particles_per_tile = N_particles // tiles
+
+    particle_lons_tiled = tiles * [None]
+    particle_lats_tiled = tiles * [None]
+
+    for i in range(tiles):
+        particle_idx_start, particle_idx_end = i*particles_per_tile, (i+1)*particles_per_tile
+        particle_lons_tiled[i] = particle_lons[particle_idx_start:particle_idx_end]
+        particle_lats_tiled[i] = particle_lons[particle_idx_start:particle_idx_end]
+
+    return particle_lons_tiled, particle_lats_tiled
 
 
 class ParticleAdvecter:
@@ -56,13 +68,9 @@ class ParticleAdvecter:
         self,
         velocity_field="OSCAR",
         particle_initial_distribution="uniform",
-        start_time=datetime(2017, 1, 1),
-        end_time=datetime(2018, 1, 1),
         dt=timedelta(hours=1),
         N_particles=1,
         N_procs=-1,
-        Tx=-1,
-        Ty=-1,
         lat_min_particle=10,
         lat_max_particle=50,
         lon_min_particle=-170,
@@ -70,6 +78,8 @@ class ParticleAdvecter:
         oscar_dataset_dir=".",
         domain_lats=slice(60, 0),
         domain_lons=slice(-180, -120),
+        start_time=datetime(2017, 1, 1),
+        end_time=datetime(2018, 1, 1),
         output_dir="."
     ):
         assert velocity_field == "OSCAR", "OSCAR is the only supported velocity field right now."
@@ -85,40 +95,20 @@ class ParticleAdvecter:
         logger.info("Requested {:d} processors. Found {:d}. Using {:d}.".format(N_procs, max_procs, N_procs))
 
         # Sanitize N_particles input.
-        assert 1 <= N_particles, "N_particles must be a positive integer."
+        assert N_particles >= 1, "N_particles must be a positive integer."
+        assert N_particles >= N_procs, "There must be at least one Lagrangian particle per processor."
         logger.info("Number of Lagrangian particles: {:d}".format(N_particles))
 
-        # Figure out the number of parallelization tiles to use.
-        assert 1 <= Tx or Tx == -1, "Number of tiles Tx must be a positive integer or -1 (choose automatically)."
-        assert 1 <= Ty or Ty == -1, "Number of tiles Ty must be a positive integer or -1 (choose automatically)."
+        # Ensure there are an equal number of particles per processor.
+        if N_procs > 1:
+            if not (N_particles / N_procs).is_integer():
+                logger.warning("Cannot equally distribute {:d} Lagrangian particles across {:d} processor."
+                               .format(N_particles, N_procs))
 
-        # If -1 is given then we automatically choose the number of tiles. To avoid having to find a nice factorization,
-        # we just choose N_procs tiles in the x direction.
-        if Tx == -1 and Ty == -1:
-            Tx, Ty = N_procs, 1
+                N_particles = (N_particles // N_procs) * N_procs
+                logger.warning("Using {:d} Lagrangian particles per processor.".format(N_particles))
 
-        # Sanitize Tx, Ty input.
-        assert Tx*Ty == N_procs, "Total number of tiles Tx*Ty must equal N_procs."
-
-        if Tx*Ty == 1:
-            particles_per_tile = N_particles  # for the case of 1 tile.
-        elif Tx*Ty > 1:
-            # If we're using multiple tiles, print some tile information.
-            logger.info("Number of tiles: Tx={:d}, Ty={:d}, total={:d}".format(Tx, Ty, Tx*Ty))
-            logger.info("Lagrangian particles per tile: {:}".format(N_particles / (Tx*Ty)))
-
-            # Number of integer particles in each tile.
-            particles_per_tile = N_particles // (Tx * Ty)
-
-            # If we cannot have an integer number of particles per tile, round down and use that many per tile.
-            if particles_per_tile*Tx*Ty != N_particles:
-                logger.warning("N_particles does not factor across {:d} tiles. "
-                               "Using {:d} Lagrangian particles per tile.".format(Tx*Ty, particles_per_tile))
-
-                N_particles = particles_per_tile*Tx*Ty
-                logger.warning("N_particles has been set to {:d}.".format(N_particles))
-        else:
-            raise ValueError("Number of tiles Tx*Ty must be a positive integer.")
+        logger.info("Lagrangian particles per processor: {:}".format(N_particles / N_procs))
 
         # Sanitize output_dir variable.
         output_dir = os.path.abspath(output_dir)
@@ -135,26 +125,25 @@ class ParticleAdvecter:
         assert os.path.isdir(oscar_dataset_dir), "oscar_dataset_Dir {:s} is not a directory.".format(oscar_dataset_dir)
         logger.info("Will read OSCAR velocity datasets from: {:s}".format(oscar_dataset_dir))
 
-        logger.info("Generating locations for {:d} Lagrangian particles across {:d} tiles..."
-                    .format(N_particles, Tx*Ty))
+        logger.info("Generating locations for {:d} Lagrangian particles...".format(N_particles))
 
         # Generate initial locations for each particle.
         if particle_initial_distribution == "uniform":
-            particle_lons, particle_lats = generate_uniform_particle_locations(particles_per_tile=particles_per_tile,
-                                                                               Tx=Tx, Ty=Ty,
-                                                                               lat_min_particle=lat_min_particle,
-                                                                               lat_max_particle=lat_max_particle,
-                                                                               lon_min_particle=lon_min_particle,
-                                                                               lon_max_particle=lon_max_particle)
+            particle_lons, particle_lats = generate_uniform_particle_locations(N_particles=N_particles,
+                                                                               lat_min_particles=lat_min_particle,
+                                                                               lat_max_particles=lat_max_particle,
+                                                                               lon_min_particles=lon_min_particle,
+                                                                               lon_max_particles=lon_max_particle)
         else:
-            raise ValueError
+            raise ValueError("Only uniform initial particle distributions are supported.")
+
+        logger.info("Distributing {:d} particles across {:d} processors...".format(N_particles, N_procs))
+        particle_lons, particle_lats = distribute_particles_across_tiles(particle_lons, particle_lats, N_procs)
 
         self.velocity_field = velocity_field
         self.particle_initial_distribution = particle_initial_distribution
         self.N_procs = N_procs
         self.N_particles = N_particles
-        self.Tx = Tx
-        self.Ty = Ty
         self.output_dir = output_dir
         self.oscar_dataset_dir = oscar_dataset_dir
         self.particle_lons = particle_lons
@@ -167,7 +156,7 @@ class ParticleAdvecter:
 
     def time_step(self, Nt, dt):
         if self.N_procs == 1:
-            pass
+            self.time_step_tile(0, self.lons[0], self.lats[0])
         else:
             joblib.Parallel(n_jobs=self.N_procs)(
                 joblib.delayed(self.time_step_tile)(tile_id, self.lons[tile_id], self.lats[tile_id])

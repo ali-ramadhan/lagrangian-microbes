@@ -101,7 +101,7 @@ class InteractionSimulator:
                 kdt = cKDTree(np.array(microbe_locations))
                 build_time = time() - tic
 
-                logger.info("Querying kd-tree for pairs (radius={:.2g}, norm={:})... "
+                logger.info("Querying kd-tree for pairs... "
                             .format(self.interaction_radius, self.interaction_norm))
                 tic = time()
                 microbe_pairs = kdt.query_pairs(r=self.interaction_radius, p=self.interaction_norm)
@@ -119,8 +119,8 @@ class InteractionSimulator:
 
                 microbe_output = {
                     "time": times[n],
-                    "lon": microbe_lons,
-                    "lat": microbe_lats,
+                    "lon": microbe_lons[n, :],
+                    "lat": microbe_lats[n, :],
                     "properties": self.microbe_properties
                 }
 
@@ -133,7 +133,7 @@ class InteractionSimulator:
                 pickle_filesize = os.path.getsize(pickle_filepath)
 
                 logger.info("Building kd-tree:         {:s}.".format(pretty_time(build_time)))
-                logger.info("Quaerying for pairs:      {:s}.".format(pretty_time(query_time)))
+                logger.info("Querying for pairs:       {:s}.".format(pretty_time(query_time)))
                 logger.info("Simulating interactions:  {:s}.".format(pretty_time(interaction_time)))
                 logger.info("Pickling and compressing: {:s}. ({:s}, {:s} per particle)"
                             .format(pretty_time(pickling_time), pretty_filesize(pickle_filesize),

@@ -64,7 +64,7 @@ crs_sps._threshold = 1000.0  # This solves https://github.com/SciTools/cartopy/i
 
 def plot_microbe_warfare_frame(fpath):
     plt.style.use('dark_background')
-    
+
     period = int(re.search("p\d\d\d\d", fpath).group(0)[1:])
     hour = int(re.search("h\d\d\d", fpath).group(0)[1:])
 

@@ -4,10 +4,10 @@ import pickle
 from datetime import datetime, timedelta
 
 import numpy as np
+from numpy import linspace, repeat, tile
 import xarray as xr
 import joblib
 import parcels
-from numpy import linspace, repeat, tile
 
 # Configure logger first before importing any sub-module that depend on the logger being already configured.
 import logging.config
@@ -18,19 +18,14 @@ logger = logging.getLogger(__name__)
 from utils import most_symmetric_integer_factorization, closest_hour, pretty_time
 
 
-def generate_uniform_particle_locations(N_particles=1,
-                                        lat_min_particles=25,
-                                        lat_max_particles=35,
-                                        lon_min_particles=205,
-                                        lon_max_particles=215
-                                        ):
+def uniform_particle_locations(N_particles=1, lat_min=None, lat_max=None, lon_min=None, lon_max=None):
     # Determine number of particles to generate along each dimension.
     N_particles_lat, N_particles_lon = most_symmetric_integer_factorization(N_particles)
 
-    logger.info("Generating ({:d},{:d}) particles along each (lat, lon).".format(N_particles_lat, N_particles_lon))
+    logger.info("Generating ({:d}, {:d}) particles along each (lat, lon).".format(N_particles_lat, N_particles_lon))
 
-    particle_lons = repeat(linspace(lon_min_particles, lon_max_particles, N_particles_lon), N_particles_lat)
-    particle_lats = tile(linspace(lat_min_particles, lat_max_particles, N_particles_lat), N_particles_lon)
+    particle_lons = repeat(linspace(lon_min, lon_max, N_particles_lon), N_particles_lat)
+    particle_lats = tile(linspace(lat_min, lat_max, N_particles_lat), N_particles_lon)
 
     return particle_lons, particle_lats
 
@@ -74,22 +69,14 @@ def oscar_dataset_opendap_url(year):
 class ParticleAdvecter:
     def __init__(
         self,
+        particle_lons,
+        particle_lats,
         velocity_field="OSCAR",
-        particle_initial_distribution="uniform",
-        dt=timedelta(hours=1),
-        N_particles=1,
         N_procs=-1,
-        lat_min_particle=25,
-        lat_max_particle=35,
-        lon_min_particle=210,
-        lon_max_particle=220,
         oscar_dataset_dir=".",
-        start_time=datetime(2017, 1, 1),
-        end_time=datetime(2017, 2, 1),
         output_dir="."
     ):
         assert velocity_field == "OSCAR", "OSCAR is the only supported velocity field right now."
-        assert particle_initial_distribution == "uniform"
 
         # Figure out number of processors to use.
         assert 1 <= N_procs or N_procs == -1, "Number of processors N_procs must be a positive integer " \
@@ -100,21 +87,12 @@ class ParticleAdvecter:
 
         logger.info("Requested {:d} processors. Found {:d}. Using {:d}.".format(N_procs, max_procs, N_procs))
 
-        # Sanitize N_particles input.
-        assert N_particles >= 1, "N_particles must be a positive integer."
-        assert N_particles >= N_procs, "There must be at least one Lagrangian particle per processor."
-        logger.info("Number of Lagrangian particles: {:d}".format(N_particles))
+        assert particle_lons.size == particle_lats.size
 
-        # Ensure there are an equal number of particles per processor.
-        if N_procs > 1:
-            if not (N_particles / N_procs).is_integer():
-                logger.warning("Cannot equally distribute {:d} Lagrangian particles across {:d} processor."
-                               .format(N_particles, N_procs))
+        N_particles = particle_lons.size
+        assert (N_particles / N_procs).is_integer()
 
-                N_particles = (N_particles // N_procs) * N_procs
-                logger.warning("Using {:d} Lagrangian particles per processor.".format(N_particles))
-
-        logger.info("Lagrangian particles per processor: {:}".format(N_particles / N_procs))
+        logger.info("Lagrangian particles per processor: {:}".format(N_particles // N_procs))
 
         # Sanitize output_dir variable.
         output_dir = os.path.abspath(output_dir)
@@ -131,52 +109,31 @@ class ParticleAdvecter:
         assert os.path.isdir(oscar_dataset_dir), "oscar_dataset_Dir {:s} is not a directory.".format(oscar_dataset_dir)
         logger.info("Will read OSCAR velocity datasets from: {:s}".format(oscar_dataset_dir))
 
-        logger.info("Generating locations for {:d} Lagrangian particles...".format(N_particles))
-
-        # Generate initial locations for each particle.
-        if particle_initial_distribution == "uniform":
-            particle_lons, particle_lats = generate_uniform_particle_locations(N_particles=N_particles,
-                                                                               lat_min_particles=lat_min_particle,
-                                                                               lat_max_particles=lat_max_particle,
-                                                                               lon_min_particles=lon_min_particle,
-                                                                               lon_max_particles=lon_max_particle)
-        else:
-            raise ValueError("Only uniform initial particle distributions are supported.")
-
         logger.info("Distributing {:d} particles across {:d} processors...".format(N_particles, N_procs))
         particle_lons, particle_lats = distribute_particles_across_tiles(particle_lons, particle_lats, N_procs)
 
-        self.velocity_field = velocity_field
-        self.particle_initial_distribution = particle_initial_distribution
-        self.N_procs = N_procs
-        self.N_particles = N_particles
-        self.output_dir = output_dir
-        self.oscar_dataset_dir = oscar_dataset_dir
         self.particle_lons = particle_lons
         self.particle_lats = particle_lats
+        self.velocity_field = velocity_field
+        self.N_procs = N_procs
+        self.output_dir = output_dir
+        self.oscar_dataset_dir = oscar_dataset_dir
 
-        self.dt = dt
-        self.start_time = start_time
-        self.end_time = end_time
-
-    def time_step(self, Nt=1, dt=timedelta(hours=1)):
+    def time_step(self, start_time, end_time, dt):
         if self.N_procs == 1:
             self.time_step_tile(0)
         else:
             joblib.Parallel(n_jobs=self.N_procs)(
-                joblib.delayed(self.time_step_tile)(tile_id) for tile_id in range(self.N_procs)
+                joblib.delayed(self.time_step_tile)(tile_id, start_time, end_time, dt) for tile_id in range(self.N_procs)
             )
 
-    def time_step_tile(self, tile_id):
-        mlons, mlats = self.particle_lons[tile_id], self.particle_lats[tile_id]
-
-        particles_per_tile = mlons.size
-
-        dt = self.dt
-
+    def time_step_tile(self, tile_id, start_time, end_time, dt):
         tilestamp = "[Tile {:02d}]".format(tile_id)
 
-        oscar_url = oscar_dataset_opendap_url(self.start_time.year)
+        particle_lons, particle_lats = self.particle_lons[tile_id], self.particle_lats[tile_id]
+        particles_per_tile = particle_lons.size
+
+        oscar_url = oscar_dataset_opendap_url(start_time.year)
         logger.info("{:s} Accessing OSCAR dataset over OPeNDAP: {:s}".format(tilestamp, oscar_url))
 
         velocity_dataset = xr.open_dataset(oscar_url)
@@ -184,7 +141,6 @@ class ParticleAdvecter:
         # Choose subset of velocity field we want to use
         nominal_depth = velocity_dataset["depth"].values[0]
         velocity_subdataset = velocity_dataset.sel(depth=nominal_depth)
-        # time=slice(self.start_time, self.end_time),
 
         gtimes = velocity_subdataset["time"].values
         gtimes = np.array([(gtimes[i] - gtimes[0]) // np.timedelta64(1, "s") for i in range(gtimes.size)])

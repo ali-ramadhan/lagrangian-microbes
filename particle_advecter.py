@@ -224,7 +224,7 @@ class ParticleAdvecter:
             tic = time()
             with open(dump_filepath, "wb") as f:
                 logger.info("{:s} Dumping intermediate output: {:s}".format(tilestamp, dump_filepath))
-                joblib.dump(intermediate_output, f, compress=True, protocol=pickle.HIGHEST_PROTOCOL)
+                joblib.dump(intermediate_output, f, compress=("zlib", 3), protocol=pickle.HIGHEST_PROTOCOL)
 
             toc = time()
             pickling_time = toc - tic

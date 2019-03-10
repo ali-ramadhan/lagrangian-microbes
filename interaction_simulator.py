@@ -22,9 +22,7 @@ class InteractionSimulator:
     def __init__(
             self,
             particle_advecter,
-            microbe_properties,
             pair_interaction,
-            pair_interaction_parameters,
             interaction_radius,
             interaction_norm=2,
             self_interaction=None,
@@ -40,9 +38,12 @@ class InteractionSimulator:
             logger.info("Creating directory: {:s}".format(output_dir))
             os.makedirs(output_dir)
 
+        pair_interaction_function, pair_interaction_parameters, microbe_properties \
+            = pair_interaction(N_microbes=self.pa.N_particles)
+
         self.pa = particle_advecter
         self.microbe_properties = microbe_properties
-        self.pair_interaction = pair_interaction
+        self.pair_interaction = pair_interaction_function
         self.pair_interaction_parameters = pair_interaction_parameters
         self.interaction_radius = interaction_radius
         self.interaction_norm = interaction_norm

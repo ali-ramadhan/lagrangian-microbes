@@ -203,7 +203,6 @@ class ParticleAdvecter:
 
             advection_time = 0
             storing_time = 0
-            pickling_time = 0
 
             for n in range(iters_to_do):
                 tic = time()

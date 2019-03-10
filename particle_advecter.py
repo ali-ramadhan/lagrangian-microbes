@@ -232,8 +232,8 @@ class ParticleAdvecter:
             pickling_time = toc - tic
             pickle_filesize = os.path.getsize(dump_filepath)
 
-            logger.info("{:s} Advecting particles         took {:s}.".format(tilestamp, pretty_time(advection_time)))
-            logger.info("{:s} Storing intermediate output took {:s}.".format(tilestamp, pretty_time(storing_time)))
-            logger.info("{:s} Pickling and compressing    took {:s}. ({:s}, {:s} per particle per iteration)"
+            logger.info("{:s} Advecting particles:         {:s}.".format(tilestamp, pretty_time(advection_time)))
+            logger.info("{:s} Storing intermediate output: {:s}.".format(tilestamp, pretty_time(storing_time)))
+            logger.info("{:s} Pickling and compressing:    {:s}. ({:s}, {:s} per particle per iteration)"
                         .format(tilestamp, pretty_time(pickling_time), pretty_filesize(pickle_filesize),
                                 pretty_filesize(pickle_filesize / (iters_to_do * particles_per_tile))))

@@ -1,4 +1,5 @@
 import os
+import pickle
 from time import time
 from datetime import datetime, timedelta
 
@@ -98,23 +99,45 @@ class InteractionSimulator:
                 logger.info("Building kd-tree... ")
                 tic = time()
                 kdt = cKDTree(np.array(microbe_locations))
-                toc = time()
-                logger.info("Building kd-tree took {:s}.".format(pretty_time(toc - tic)))
+                build_time = time() - tic
 
                 logger.info("Querying kd-tree for pairs (radius={:.2g}, norm={:})... "
                             .format(self.interaction_radius, self.interaction_norm))
                 tic = time()
                 microbe_pairs = kdt.query_pairs(r=self.interaction_radius, p=self.interaction_norm)
-                toc = time()
-                logger.info("Quaerying for pairs took {:s}.".format(pretty_time(toc - tic)))
+                query_time = time() - tic
 
                 n_interactions = len(microbe_pairs)
                 logger.info("Simulating {:d} pair-wise interactions...".format(n_interactions))
                 tic = time()
                 for pair in microbe_pairs:
                     self.pair_interaction(self.pair_interaction_parameters, self.microbe_properties, pair[0], pair[1])
-                toc = time()
-                logger.info("Simulating pair-wise interactions took {:s}.".format(pretty_time(toc - tic)))
+                interaction_time = time() - tic
+
+                pickle_filename = "microbe_properties_" + str(iteration).zfill(5) + ".pickle"
+                pickle_filepath = os.path.join(self.output_dir, pickle_filename)
+
+                microbe_output = {
+                    "time": times[n],
+                    "lon": microbe_lons,
+                    "lat": microbe_lats,
+                    "properties": self.microbe_properties
+                }
+
+                tic = time()
+                with open(pickle_filepath, "wb") as f:
+                    logger.info("Saving microbe properties: {:s}".format(pickle_filepath))
+                    joblib.dump(microbe_output, f, compress=("zlib", 3), protocol=pickle.HIGHEST_PROTOCOL)
+
+                pickling_time = time() - tic
+                pickle_filesize = os.path.getsize(pickle_filepath)
+
+                logger.info("Building kd-tree:         {:s}.".format(pretty_time(build_time)))
+                logger.info("Quaerying for pairs:      {:s}.".format(pretty_time(query_time)))
+                logger.info("Simulating interactions:  {:s}.".format(pretty_time(interaction_time)))
+                logger.info("Pickling and compressing: {:s}. ({:s}, {:s} per particle)"
+                            .format(pretty_time(pickling_time), pretty_filesize(pickle_filesize),
+                                    pretty_filesize(pickle_filesize / self.pa.N_particles)))
 
                 t = t + dt
                 iteration = iteration + 1

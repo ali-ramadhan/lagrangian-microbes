@@ -114,7 +114,7 @@ class ParticleAdvecter:
 
     def time_step(self, start_time, end_time, dt):
         if self.N_procs == 1:
-            self.time_step_tile(0)
+            self.time_step_tile(0, start_time, end_time, dt)
         else:
             joblib.Parallel(n_jobs=self.N_procs)(
                 joblib.delayed(self.time_step_tile)(tile_id, start_time, end_time, dt) for tile_id in range(self.N_procs)
@@ -144,15 +144,18 @@ class ParticleAdvecter:
         grid_times = np.array([(grid_times[i] - grid_times[0]) // np.timedelta64(1, "s")
                                for i in range(grid_times.size)])
 
+        grid = parcels.grid.RectilinearZGrid(grid_lons, grid_lats, depth=grid_depth, time=grid_times, mesh="spherical")
+
         u_data = velocity_subdataset["u"].values
         v_data = velocity_subdataset["v"].values
 
-        u_field = parcels.field.Field(name="U", data=u_data, time=grid_times, lon=grid_lons, lat=grid_lats, depth=grid_depth, mesh="spherical")
-        v_field = parcels.field.Field(name="V", data=v_data, time=grid_times, lon=grid_lons, lat=grid_lats, depth=grid_depth, mesh="spherical")
+        u_field = parcels.field.Field(name="U", data=u_data, grid=grid)
+        v_field = parcels.field.Field(name="V", data=v_data, grid=grid)
 
         fieldset = parcels.fieldset.FieldSet(u_field, v_field)
 
-        pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle, lon=particle_lons, lat=particle_lats)
+        pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
+                                             lon=particle_lons, lat=particle_lats)
 
         dump_filename = "particle_locations_0000" "_tile" + str(tile_id).zfill(2) + ".pickle"
         dump_filepath = os.path.join(self.output_dir, dump_filename)

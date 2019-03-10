@@ -65,3 +65,20 @@ def pretty_time(t):
         return "{:.3g} s".format(t)
     else:
         return "{:.3g} mins".format(t / 60)
+
+
+def pretty_filesize(num, suffix="B"):
+    """
+    Code credit: https://stackoverflow.com/a/1094933
+    Args:
+        num:
+        suffix:
+
+    Returns:
+
+    """
+    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
+        if abs(num) < 1024.0:
+            return "%3.1f %s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f %s%s" % (num, 'Yi', suffix)

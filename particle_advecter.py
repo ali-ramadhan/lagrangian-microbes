@@ -15,7 +15,7 @@ import logging.config
 logging.config.fileConfig("logging.ini")
 logger = logging.getLogger(__name__)
 
-from utils import most_symmetric_integer_factorization, closest_hour, pretty_time
+from utils import most_symmetric_integer_factorization, closest_hour, pretty_time, pretty_filesize
 
 
 def uniform_particle_locations(N_particles=1, lat_min=None, lat_max=None, lon_min=None, lon_max=None):
@@ -151,7 +151,8 @@ class ParticleAdvecter:
         grid_times = np.array([(grid_times[i] - grid_times[0]) // np.timedelta64(1, "s")
                                for i in range(grid_times.size)])
 
-        logger.info("{:s} Building parcels grid, fields, and particle set...".format(tilestamp))
+        logger.info("{:s} Building parcels grid, fields, and particle set... "
+                    "(this might take some time as tons of data is downloaded over OPeNDAP)".format(tilestamp))
 
         grid = parcels.grid.RectilinearZGrid(grid_lons, grid_lats, depth=grid_depth, time=grid_times, mesh="spherical")
 
@@ -225,15 +226,10 @@ class ParticleAdvecter:
 
             toc = time()
             pickling_time = toc - tic
+            pickle_filesize = os.path.getsize(dump_filepath)
 
-            logger.info("{:s} Advection particles         took {:s}.".format(tilestamp, pretty_time(advection_time)))
+            logger.info("{:s} Advecting particles         took {:s}.".format(tilestamp, pretty_time(advection_time)))
             logger.info("{:s} Storing intermediate output took {:s}.".format(tilestamp, pretty_time(storing_time)))
-            logger.info("{:s} Pickling and compressing    took {:s}.".format(tilestamp, pretty_time(pickling_time)))
-
-            # Create new mlon and mlat lists to create new particle set.
-            # n_particles = len(pset)
-            # mlons = np.zeros(n_particles)
-            # mlats = np.zeros(n_particles)
-            # for i, p in enumerate(pset):
-            #     mlons[i] = p.lon
-            #     mlats[i] = p.lat
+            logger.info("{:s} Pickling and compressing    took {:s}. ({:s}, {:s} per particle per iteration)"
+                        .format(tilestamp, pretty_time(pickling_time), pretty_filesize(pickle_filesize),
+                                pretty_filesize(pickle_filesize / (iters_to_do * particles_per_tile))))

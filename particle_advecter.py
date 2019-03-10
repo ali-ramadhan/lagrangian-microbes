@@ -191,10 +191,12 @@ class ParticleAdvecter:
             logger.info("{:s} Advecting particles (iteration {:} -> {:}): {:} -> {:}..."
                         .format(tilestamp, start_iter_str, end_iter_str, chunk_start_time, chunk_end_time))
 
+            # Parcels only uses float32 to keep track of particle locations so we don't lose anything by saving lat/lon
+            # using float32. Only exception is on a C-grid (might be relevant for LLC4320).
             intermediate_output = {
                 "time": iters_to_do * [None],
-                "lat": zeros((iters_to_do, particles_per_tile)),
-                "lon": zeros((iters_to_do, particles_per_tile))
+                "lat": zeros((iters_to_do, particles_per_tile), dtype=np.float32),
+                "lon": zeros((iters_to_do, particles_per_tile), dtype=np.float32)
             }
 
             advection_time = 0
@@ -222,7 +224,7 @@ class ParticleAdvecter:
             tic = time()
             with open(dump_filepath, "wb") as f:
                 logger.info("{:s} Dumping intermediate output: {:s}".format(tilestamp, dump_filepath))
-                joblib.dump(intermediate_output, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
+                joblib.dump(intermediate_output, f, compress=True, protocol=pickle.HIGHEST_PROTOCOL)
 
             toc = time()
             pickling_time = toc - tic

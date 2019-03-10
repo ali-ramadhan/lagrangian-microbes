@@ -116,6 +116,9 @@ class ParticleAdvecter:
         self.output_chunk_iters = output_chunk_iters
 
     def time_step(self, start_time, end_time, dt):
+        logger.info("Starting time stepping: {:} -> {:} (dt={:}) on {:d} processors."
+                    .format(start_time, end_time, dt, self.N_procs))
+
         if self.N_procs == 1:
             self.time_step_tile(0, start_time, end_time, dt)
         else:
@@ -125,6 +128,7 @@ class ParticleAdvecter:
 
     def time_step_tile(self, tile_id, start_time, end_time, dt):
         tilestamp = "[Tile {:02d}]".format(tile_id)
+        logger = logging.getLogger(__name__ + tilestamp)  # Give each tile/processor its own logger.
 
         particle_lons, particle_lats = self.particle_lons[tile_id], self.particle_lats[tile_id]
         particles_per_tile = particle_lons.size
@@ -192,28 +196,39 @@ class ParticleAdvecter:
                 "lon": zeros((iters_to_do, particles_per_tile))
             }
 
-            tic = time()
+            advection_time = 0
+            storing_time = 0
+            pickling_time = 0
+
             for n in range(iters_to_do):
+                tic = time()
                 pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
+                toc = time()
 
                 t = t + dt
                 iteration = iteration + 1
 
+                advection_time += toc - tic
+
+                tic = time()
                 intermediate_output["time"][n] = t
                 for i, p in enumerate(pset):
                     intermediate_output["lon"][n, i] = p.lon
                     intermediate_output["lat"][n, i] = p.lat
-
-            toc = time()
-            logger.info("{:s} Advection took {:s}.".format(tilestamp, pretty_time(toc - tic)))
+                toc = time()
+                storing_time += toc - tic
 
             tic = time()
             with open(dump_filepath, "wb") as f:
-                logger.info("{:s} Saving intermediate output: {:s}".format(tilestamp, dump_filepath))
+                logger.info("{:s} Dumping intermediate output: {:s}".format(tilestamp, dump_filepath))
                 joblib.dump(intermediate_output, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
 
             toc = time()
-            logger.info("{:s} Dumping took {:s}.".format(tilestamp, pretty_time(toc - tic)))
+            pickling_time = toc - tic
+
+            logger.info("{:s} Advection particles         took {:s}.".format(tilestamp, pretty_time(advection_time)))
+            logger.info("{:s} Storing intermediate output took {:s}.".format(tilestamp, pretty_time(storing_time)))
+            logger.info("{:s} Pickling and compressing    took {:s}.".format(tilestamp, pretty_time(pickling_time)))
 
             # Create new mlon and mlat lists to create new particle set.
             # n_particles = len(pset)

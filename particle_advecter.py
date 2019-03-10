@@ -73,7 +73,6 @@ class ParticleAdvecter:
         particle_lats,
         velocity_field="OSCAR",
         N_procs=-1,
-        oscar_dataset_dir=".",
         output_dir="."
     ):
         assert velocity_field == "OSCAR", "OSCAR is the only supported velocity field right now."
@@ -104,11 +103,6 @@ class ParticleAdvecter:
             logger.info("Creating directory: {:s}".format(output_dir))
             os.makedirs(output_dir)
 
-        # Sanitize oscar_dataset_dir variable.
-        oscar_dataset_dir = os.path.abspath(oscar_dataset_dir)
-        assert os.path.isdir(oscar_dataset_dir), "oscar_dataset_Dir {:s} is not a directory.".format(oscar_dataset_dir)
-        logger.info("Will read OSCAR velocity datasets from: {:s}".format(oscar_dataset_dir))
-
         logger.info("Distributing {:d} particles across {:d} processors...".format(N_particles, N_procs))
         particle_lons, particle_lats = distribute_particles_across_tiles(particle_lons, particle_lats, N_procs)
 
@@ -117,7 +111,6 @@ class ParticleAdvecter:
         self.velocity_field = velocity_field
         self.N_procs = N_procs
         self.output_dir = output_dir
-        self.oscar_dataset_dir = oscar_dataset_dir
 
     def time_step(self, start_time, end_time, dt):
         if self.N_procs == 1:

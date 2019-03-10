@@ -192,7 +192,7 @@ class ParticleAdvecter:
                         .format(tilestamp, start_iter_str, end_iter_str, chunk_start_time, chunk_end_time))
 
             # Parcels only uses float32 to keep track of particle locations so we don't lose anything by saving lat/lon
-            # using float32. Only exception is on a C-grid (might be relevant for LLC4320).
+            # using float32. The exception is on a C-grid (might be relevant for LLC4320).
             intermediate_output = {
                 "time": iters_to_do * [None],
                 "lat": zeros((iters_to_do, particles_per_tile), dtype=np.float32),

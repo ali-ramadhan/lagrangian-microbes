@@ -85,7 +85,7 @@ class ParticleAdvecter:
         lon_max_particle=220,
         oscar_dataset_dir=".",
         start_time=datetime(2017, 1, 1),
-        end_time=datetime(2018, 1, 1),
+        end_time=datetime(2017, 2, 1),
         output_dir="."
     ):
         assert velocity_field == "OSCAR", "OSCAR is the only supported velocity field right now."
@@ -180,76 +180,62 @@ class ParticleAdvecter:
         logger.info("{:s} Accessing OSCAR dataset over OPeNDAP: {:s}".format(tilestamp, oscar_url))
 
         velocity_dataset = xr.open_dataset(oscar_url)
-        n_fields = len(velocity_dataset["time"])
 
-        n_periods = 3
+        # Choose subset of velocity field we want to use
+        nominal_depth = velocity_dataset["depth"].values[0]
+        velocity_subdataset = velocity_dataset.sel(depth=nominal_depth)
+        # time=slice(self.start_time, self.end_time),
 
-        for period in range(n_periods):
-            t_start = velocity_dataset["time"][period].values
+        gtimes = velocity_subdataset["time"].values
+        gtimes = np.array([(gtimes[i] - gtimes[0]) // np.timedelta64(1, "s") for i in range(gtimes.size)])
 
-            # If we're on the last field, then t_end will be midnight of next year.
-            if period == n_fields:
-                t_end = datetime(t_start.year + 1, 1, 1)
-            else:
-                t_end = velocity_dataset["time"][period+1].values
+        glats = velocity_subdataset["latitude"].values
+        glons = velocity_subdataset["longitude"].values
+        depth = np.array([nominal_depth])
 
-            t_start_ch = closest_hour(t_start)
-            t_end_ch = closest_hour(t_end)
+        u_data = velocity_subdataset["u"].values
+        v_data = velocity_subdataset["v"].values
 
-            advection_hours = round((t_end_ch - t_start_ch) / timedelta(hours=1))
+        u_field = parcels.field.Field(name="U", data=u_data, time=gtimes, lon=glons, lat=glats, depth=depth, mesh="spherical")
+        v_field = parcels.field.Field(name="V", data=v_data, time=gtimes, lon=glons, lat=glats, depth=depth, mesh="spherical")
 
-            # Choose subset of velocity field we want to use
-            year_float = velocity_dataset["year"].values[period]
-            depth_float = velocity_dataset["depth"].values[0]
-            # velocity_subdataset = velocity_dataset.sel(time=t_start, year=year_float, depth=depth_float,
-            #                                            latitude=self.domain_lats, longitude=self.domain_lons)
-            velocity_subdataset = velocity_dataset.sel(time=t_start, year=year_float, depth=depth_float)
+        fieldset = parcels.fieldset.FieldSet(u_field, v_field)
 
-            glats = velocity_subdataset['latitude'].values
-            glons = velocity_subdataset['longitude'].values
-            depth = np.array([depth_float])
+        pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle, lon=mlons, lat=mlats)
 
-            u_data = velocity_subdataset['u'].values
-            v_data = velocity_subdataset['v'].values
+        dump_filename = "particle_locations_p0000" "_tile" + str(tile_id).zfill(2) + ".pickle"
+        dump_filepath = os.path.join(self.output_dir, dump_filename)
 
-            u_field = parcels.field.Field(name='U', data=u_data, lon=glons, lat=glats, depth=depth, mesh='spherical')
-            v_field = parcels.field.Field(name='V', data=v_data, lon=glons, lat=glats, depth=depth, mesh='spherical')
+        logger.info("{:s} Advecting: {:} -> {:}...".format(tilestamp, self.start_time, self.end_time))
 
-            fieldset = parcels.fieldset.FieldSet(u_field, v_field)
+        advection_hours = (self.end_time - self.start_time) // dt
 
-            pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle, lon=mlons, lat=mlats)
-            # depth=depth_float*np.ones(particles_per_tile)
+        latlon_store = {
+            "hours": advection_hours,
+            "lat": np.zeros((advection_hours, particles_per_tile)),
+            "lon": np.zeros((advection_hours, particles_per_tile))
+        }
 
-            dump_filename = "particle_locations_p" + str(period).zfill(4) + "_tile" + str(tile_id).zfill(2) + ".pickle"
-            dump_filepath = os.path.join(self.output_dir, dump_filename)
+        tic = time.time()
+        for h in range(advection_hours):
+            print(h)
+            pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
 
-            logger.info("{:s} Advecting: {:} -> {:}...".format(tilestamp, t_start_ch, t_end_ch))
-
-            latlon_store = {
-                "hours": advection_hours,
-                "lat": np.zeros((advection_hours, particles_per_tile)),
-                "lon": np.zeros((advection_hours, particles_per_tile))
-            }
-
-            tic = time.time()
-            for h in range(advection_hours):
-                pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
-
-                for i, p in enumerate(pset):
-                    latlon_store["lon"][h, i] = p.lon
-                    latlon_store["lat"][h, i] = p.lat
-
-            with open(dump_filepath, "wb") as f:
-                logger.info("{:s} Saving intermediate output: {:s}".format(tilestamp, dump_filepath))
-                joblib.dump(latlon_store, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
-
-            # Create new mlon and mlat lists to create new particle set.
-            n_particles = len(pset)
-            mlons = np.zeros(n_particles)
-            mlats = np.zeros(n_particles)
             for i, p in enumerate(pset):
-                mlons[i] = p.lon
-                mlats[i] = p.lat
+                latlon_store["lon"][h, i] = p.lon
+                latlon_store["lat"][h, i] = p.lat
 
-            toc = time.time()
-            logger.info("{:s} Advection and dumping took {:s}.".format(tilestamp, pretty_time(toc - tic)))
+        with open(dump_filepath, "wb") as f:
+            logger.info("{:s} Saving intermediate output: {:s}".format(tilestamp, dump_filepath))
+            joblib.dump(latlon_store, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
+
+        # Create new mlon and mlat lists to create new particle set.
+        # n_particles = len(pset)
+        # mlons = np.zeros(n_particles)
+        # mlats = np.zeros(n_particles)
+        # for i, p in enumerate(pset):
+        #     mlons[i] = p.lon
+        #     mlats[i] = p.lat
+
+        toc = time.time()
+        logger.info("{:s} Advection and dumping took {:s}.".format(tilestamp, pretty_time(toc - tic)))

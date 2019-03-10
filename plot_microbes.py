@@ -22,6 +22,8 @@ from constants import ROCK_COLOR, PAPER_COLOR, SCISSOR_COLOR, MICROBE_MARKER_SIZ
 from constants import N, t, dt, tpd, n_periods
 from utils import closest_hour
 
+plt.style.use('dark_background')
+
 INTERACTION_OUTPUT_DIR = "/home/gridsan/aramadhan/microbes_output/"
 PLOTS_OUTPUT_DIR = INTERACTION_OUTPUT_DIR
 
@@ -61,6 +63,8 @@ crs_sps = ccrs.PlateCarree(central_longitude=-150)
 crs_sps._threshold = 1000.0  # This solves https://github.com/SciTools/cartopy/issues/363
 
 def plot_microbe_warfare_frame(fpath):
+    plt.style.use('dark_background')
+    
     period = int(re.search("p\d\d\d\d", fpath).group(0)[1:])
     hour = int(re.search("h\d\d\d", fpath).group(0)[1:])
 

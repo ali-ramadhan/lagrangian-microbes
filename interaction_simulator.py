@@ -3,7 +3,7 @@ from time import time
 from datetime import datetime, timedelta
 
 import numpy as np
-from numpy import zeros
+from numpy import float32, zeros, stack
 from scipy.spatial import cKDTree
 import joblib
 
@@ -22,7 +22,10 @@ class InteractionSimulator:
             self,
             particle_advecter,
             microbe_properties,
-            interaction,
+            pair_interaction,
+            pair_interaction_parameters,
+            interaction_radius,
+            interaction_norm=2,
             self_interaction=None,
             output_dir="."
     ):
@@ -38,7 +41,10 @@ class InteractionSimulator:
 
         self.pa = particle_advecter
         self.microbe_properties = microbe_properties
-        self.interaction = interaction
+        self.pair_interaction = pair_interaction
+        self.pair_interaction_parameters = pair_interaction_parameters
+        self.interaction_radius = interaction_radius
+        self.interaction_norm = interaction_norm
         self.self_interaction = self_interaction
         self.output_dir = output_dir
 
@@ -61,8 +67,9 @@ class InteractionSimulator:
             chunk_start_time = t
             chunk_end_time = t + iters_to_do*dt
 
-            microbe_lons = np.zeros((iters_to_do, self.pa.N_particles), dtype=np.float32)
-            microbe_lats = np.zeros((iters_to_do, self.pa.N_particles), dtype=np.float32)
+            # Pre-allocate memory to store all the microbe locations.
+            microbe_lons = zeros((iters_to_do, self.pa.N_particles), dtype=float32)
+            microbe_lats = zeros((iters_to_do, self.pa.N_particles), dtype=float32)
 
             tic = time()
             for tile_id in range(self.pa.N_procs):
@@ -79,5 +86,35 @@ class InteractionSimulator:
                 microbe_lats[:, i1:i2] = particle_locations["lat"]
 
             toc = time()
-            logger.info("Reading location of {:d} particles from {:d} files took {:s}."
+            logger.info("Reading locations of {:d} particles from {:d} files took {:s}."
                         .format(self.pa.N_particles, self.pa.N_procs, pretty_time(toc - tic)))
+
+            logger.info("Simulating interactions (iteration {:} -> {:}): {:} -> {:}..."
+                        .format(start_iter_str, end_iter_str, chunk_start_time, chunk_end_time))
+
+            for n in range(iters_to_do):
+                microbe_locations = stack((microbe_lons[n, :], microbe_lats[n, :]), axis=-1)
+
+                logger.info("Building kd-tree... ")
+                tic = time()
+                kdt = cKDTree(np.array(microbe_locations))
+                toc = time()
+                logger.info("Building kd-tree took {:s}.".format(pretty_time(toc - tic)))
+
+                logger.info("Querying kd-tree for pairs (radius={:.2g}, norm={:})... "
+                            .format(self.interaction_radius, self.interaction_norm))
+                tic = time()
+                microbe_pairs = kdt.query_pairs(r=self.interaction_radius, p=self.interaction_norm)
+                toc = time()
+                logger.info("Quaerying for pairs took {:s}.".format(pretty_time(toc - tic)))
+
+                n_interactions = len(microbe_pairs)
+                logger.info("Simulating {:d} pair-wise interactions...".format(n_interactions))
+                tic = time()
+                for pair in microbe_pairs:
+                    self.pair_interaction(self.pair_interaction_parameters, self.microbe_properties, pair[0], pair[1])
+                toc = time()
+                logger.info("Simulating pair-wise interactions took {:s}.".format(pretty_time(toc - tic)))
+
+                t = t + dt
+                iteration = iteration + 1

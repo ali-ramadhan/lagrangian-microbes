@@ -111,7 +111,9 @@ class ParticleAdvecter:
         self.particle_lons = particle_lons
         self.particle_lats = particle_lats
         self.velocity_field = velocity_field
+        self.N_particles = N_particles
         self.N_procs = N_procs
+        self.particles_per_tile = N_particles // N_procs
         self.output_dir = output_dir
         self.output_chunk_iters = output_chunk_iters
 
@@ -152,7 +154,7 @@ class ParticleAdvecter:
                                for i in range(grid_times.size)])
 
         logger.info("{:s} Building parcels grid, fields, and particle set... "
-                    "(this might take some time as tons of data is downloaded over OPeNDAP)".format(tilestamp))
+                    "(this might take a long time as tons of data is downloaded over OPeNDAP)".format(tilestamp))
 
         grid = parcels.grid.RectilinearZGrid(grid_lons, grid_lats, depth=grid_depth, time=grid_times, mesh="spherical")
 
@@ -174,9 +176,9 @@ class ParticleAdvecter:
             iters_to_do = min(self.output_chunk_iters, iters_remaining)
 
             if iters_to_do == self.output_chunk_iters:
-                logger.info("{:s} Advecting for {:d} iterations.".format(tilestamp, iters_to_do))
+                logger.info("{:s} Will advect for {:d} iterations.".format(tilestamp, iters_to_do))
             else:
-                logger.info("{:s} Advecting for {:d} iterations to end of simulation.".format(tilestamp, iters_to_do))
+                logger.info("{:s} Will advect for {:d} iterations to end of simulation.".format(tilestamp, iters_to_do))
 
             start_iter_str = str(iteration).zfill(5)
             end_iter_str = str(iteration + iters_to_do).zfill(5)

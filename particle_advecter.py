@@ -135,29 +135,31 @@ class ParticleAdvecter:
         nominal_depth = velocity_dataset["depth"].values[0]
         velocity_subdataset = velocity_dataset.sel(depth=nominal_depth)
 
-        gtimes = velocity_subdataset["time"].values
-        gtimes = np.array([(gtimes[i] - gtimes[0]) // np.timedelta64(1, "s") for i in range(gtimes.size)])
+        grid_times = velocity_subdataset["time"].values
+        grid_lats = velocity_subdataset["latitude"].values
+        grid_lons = velocity_subdataset["longitude"].values
+        grid_depth = np.array([nominal_depth])
 
-        glats = velocity_subdataset["latitude"].values
-        glons = velocity_subdataset["longitude"].values
-        depth = np.array([nominal_depth])
+        # Convert from an array of numpy datetime64's to an array of ints (seconds since start of dataset).
+        grid_times = np.array([(grid_times[i] - grid_times[0]) // np.timedelta64(1, "s")
+                               for i in range(grid_times.size)])
 
         u_data = velocity_subdataset["u"].values
         v_data = velocity_subdataset["v"].values
 
-        u_field = parcels.field.Field(name="U", data=u_data, time=gtimes, lon=glons, lat=glats, depth=depth, mesh="spherical")
-        v_field = parcels.field.Field(name="V", data=v_data, time=gtimes, lon=glons, lat=glats, depth=depth, mesh="spherical")
+        u_field = parcels.field.Field(name="U", data=u_data, time=grid_times, lon=grid_lons, lat=grid_lats, depth=grid_depth, mesh="spherical")
+        v_field = parcels.field.Field(name="V", data=v_data, time=grid_times, lon=grid_lons, lat=grid_lats, depth=grid_depth, mesh="spherical")
 
         fieldset = parcels.fieldset.FieldSet(u_field, v_field)
 
-        pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle, lon=mlons, lat=mlats)
+        pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle, lon=particle_lons, lat=particle_lats)
 
-        dump_filename = "particle_locations_p0000" "_tile" + str(tile_id).zfill(2) + ".pickle"
+        dump_filename = "particle_locations_0000" "_tile" + str(tile_id).zfill(2) + ".pickle"
         dump_filepath = os.path.join(self.output_dir, dump_filename)
 
-        logger.info("{:s} Advecting: {:} -> {:}...".format(tilestamp, self.start_time, self.end_time))
+        logger.info("{:s} Advecting particles: {:} -> {:}...".format(tilestamp, start_time, end_time))
 
-        advection_hours = (self.end_time - self.start_time) // dt
+        advection_hours = (end_time - start_time) // dt
 
         latlon_store = {
             "hours": advection_hours,
@@ -167,7 +169,6 @@ class ParticleAdvecter:
 
         tic = time.time()
         for h in range(advection_hours):
-            print(h)
             pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
 
             for i, p in enumerate(pset):

@@ -1,10 +1,10 @@
 import os
-import time
 import pickle
+from time import time
 from datetime import datetime, timedelta
 
 import numpy as np
-from numpy import linspace, repeat, tile
+from numpy import linspace, repeat, tile, zeros
 import xarray as xr
 import joblib
 import parcels
@@ -71,9 +71,10 @@ class ParticleAdvecter:
         self,
         particle_lons,
         particle_lats,
-        velocity_field="OSCAR",
         N_procs=-1,
-        output_dir="."
+        velocity_field="OSCAR",
+        output_dir=".",
+        output_chunk_iters=100
     ):
         assert velocity_field == "OSCAR", "OSCAR is the only supported velocity field right now."
 
@@ -95,7 +96,6 @@ class ParticleAdvecter:
 
         # Sanitize output_dir variable.
         output_dir = os.path.abspath(output_dir)
-        assert os.path.isdir(output_dir), "output_dir {:s} is not a directory.".format(output_dir)
         logger.info("Particle advection output directory: {:s}".format(output_dir))
 
         # Create output directory if it doesn't exist.
@@ -106,11 +106,14 @@ class ParticleAdvecter:
         logger.info("Distributing {:d} particles across {:d} processors...".format(N_particles, N_procs))
         particle_lons, particle_lats = distribute_particles_across_tiles(particle_lons, particle_lats, N_procs)
 
+        assert output_chunk_iters >= 1
+
         self.particle_lons = particle_lons
         self.particle_lats = particle_lats
         self.velocity_field = velocity_field
         self.N_procs = N_procs
         self.output_dir = output_dir
+        self.output_chunk_iters = output_chunk_iters
 
     def time_step(self, start_time, end_time, dt):
         if self.N_procs == 1:
@@ -144,51 +147,78 @@ class ParticleAdvecter:
         grid_times = np.array([(grid_times[i] - grid_times[0]) // np.timedelta64(1, "s")
                                for i in range(grid_times.size)])
 
+        logger.info("{:s} Building parcels grid, fields, and particle set...".format(tilestamp))
+
         grid = parcels.grid.RectilinearZGrid(grid_lons, grid_lats, depth=grid_depth, time=grid_times, mesh="spherical")
 
         u_data = velocity_subdataset["u"].values
         v_data = velocity_subdataset["v"].values
 
-        u_field = parcels.field.Field(name="U", data=u_data, grid=grid)
-        v_field = parcels.field.Field(name="V", data=v_data, grid=grid)
+        u_field = parcels.field.Field(name="U", data=u_data, grid=grid, interp_method="linear")
+        v_field = parcels.field.Field(name="V", data=v_data, grid=grid, interp_method="linear")
 
         fieldset = parcels.fieldset.FieldSet(u_field, v_field)
 
         pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
                                              lon=particle_lons, lat=particle_lats)
 
-        dump_filename = "particle_locations_0000" "_tile" + str(tile_id).zfill(2) + ".pickle"
-        dump_filepath = os.path.join(self.output_dir, dump_filename)
+        t = start_time
+        iteration = 0
+        while t < end_time:
+            iters_remaining = (end_time - t) // dt
+            iters_to_do = min(self.output_chunk_iters, iters_remaining)
 
-        logger.info("{:s} Advecting particles: {:} -> {:}...".format(tilestamp, start_time, end_time))
+            if iters_to_do == self.output_chunk_iters:
+                logger.info("{:s} Advecting for {:d} iterations.".format(tilestamp, iters_to_do))
+            else:
+                logger.info("{:s} Advecting for {:d} iterations to end of simulation.".format(tilestamp, iters_to_do))
 
-        advection_hours = (end_time - start_time) // dt
+            start_iter_str = str(iteration).zfill(5)
+            end_iter_str = str(iteration + iters_to_do).zfill(5)
 
-        latlon_store = {
-            "hours": advection_hours,
-            "lat": np.zeros((advection_hours, particles_per_tile)),
-            "lon": np.zeros((advection_hours, particles_per_tile))
-        }
+            chunk_start_time = t
+            chunk_end_time = t + iters_to_do*dt
 
-        tic = time.time()
-        for h in range(advection_hours):
-            pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
+            dump_filename = "particle_locations_" + start_iter_str + "_" + end_iter_str + \
+                            "_tile" + str(tile_id).zfill(2) + ".pickle"
+            dump_filepath = os.path.join(self.output_dir, dump_filename)
 
-            for i, p in enumerate(pset):
-                latlon_store["lon"][h, i] = p.lon
-                latlon_store["lat"][h, i] = p.lat
+            logger.info("{:s} Advecting particles (iteration {:} -> {:}): {:} -> {:}..."
+                        .format(tilestamp, start_iter_str, end_iter_str, chunk_start_time, chunk_end_time))
 
-        with open(dump_filepath, "wb") as f:
-            logger.info("{:s} Saving intermediate output: {:s}".format(tilestamp, dump_filepath))
-            joblib.dump(latlon_store, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
+            intermediate_output = {
+                "time": iters_to_do * [None],
+                "lat": zeros((iters_to_do, particles_per_tile)),
+                "lon": zeros((iters_to_do, particles_per_tile))
+            }
 
-        # Create new mlon and mlat lists to create new particle set.
-        # n_particles = len(pset)
-        # mlons = np.zeros(n_particles)
-        # mlats = np.zeros(n_particles)
-        # for i, p in enumerate(pset):
-        #     mlons[i] = p.lon
-        #     mlats[i] = p.lat
+            tic = time()
+            for n in range(iters_to_do):
+                pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
 
-        toc = time.time()
-        logger.info("{:s} Advection and dumping took {:s}.".format(tilestamp, pretty_time(toc - tic)))
+                t = t + dt
+                iteration = iteration + 1
+
+                intermediate_output["time"][n] = t
+                for i, p in enumerate(pset):
+                    intermediate_output["lon"][n, i] = p.lon
+                    intermediate_output["lat"][n, i] = p.lat
+
+            toc = time()
+            logger.info("{:s} Advection took {:s}.".format(tilestamp, pretty_time(toc - tic)))
+
+            tic = time()
+            with open(dump_filepath, "wb") as f:
+                logger.info("{:s} Saving intermediate output: {:s}".format(tilestamp, dump_filepath))
+                joblib.dump(intermediate_output, f, compress=False, protocol=pickle.HIGHEST_PROTOCOL)
+
+            toc = time()
+            logger.info("{:s} Dumping took {:s}.".format(tilestamp, pretty_time(toc - tic)))
+
+            # Create new mlon and mlat lists to create new particle set.
+            # n_particles = len(pset)
+            # mlons = np.zeros(n_particles)
+            # mlats = np.zeros(n_particles)
+            # for i, p in enumerate(pset):
+            #     mlons[i] = p.lon
+            #     mlats[i] = p.lat

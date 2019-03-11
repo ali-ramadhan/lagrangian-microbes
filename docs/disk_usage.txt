@@ -1,0 +1,5 @@
+Estimate:
+Saving particle locations uses up ~6.5 bytes per particle per iteration.
+Saving microbe properties uses up ~7.0 bytes per particle per iteration.
+So a 1,000,000 particle simulation for 1 year with a time step of 1 hour:
+(6.5 + 7.0 bytes per particle per iteration) * 1,000,000 particles * 8760 iterations/year = 110 GB

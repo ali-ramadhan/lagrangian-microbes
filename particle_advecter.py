@@ -15,6 +15,7 @@ import logging.config
 logging.config.fileConfig("logging.ini")
 logger = logging.getLogger(__name__)
 
+from velocity_fields import oscar_dataset_opendap_url
 from utils import most_symmetric_integer_factorization, closest_hour, pretty_time, pretty_filesize
 
 
@@ -59,11 +60,6 @@ def distribute_particles_across_tiles(particle_lons, particle_lats, tiles):
         particle_lats_tiled[i] = particle_lats[particle_idx_start:particle_idx_end]
 
     return particle_lons_tiled, particle_lats_tiled
-
-
-def oscar_dataset_opendap_url(year):
-    return r"https://podaac-opendap.jpl.nasa.gov:443/opendap/allData/oscar/preview/L4/oscar_third_deg/oscar_vel" \
-           + str(year) + ".nc.gz"
 
 
 class ParticleAdvecter:

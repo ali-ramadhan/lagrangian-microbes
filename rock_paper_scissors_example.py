@@ -5,6 +5,7 @@ from numpy import int8
 
 from particle_advecter import ParticleAdvecter, uniform_particle_locations
 from interaction_simulator import InteractionSimulator
+from microbe_plotter import MicrobePlotter
 from interactions import rock_paper_scissors
 
 N = 10000  # Number of particles
@@ -28,3 +29,9 @@ isim = InteractionSimulator(pa, pair_interaction=rock_paper_scissors, interactio
 
 # Simulate the interactions.
 isim.time_step(start_time=start_time, end_time=end_time, dt=dt)
+
+# Create a microbe plotter that will produce a plot of all the microbes at a single iteration.
+mp = MicrobePlotter(N_procs=1, dark_theme=True, input_dir=output_dir, output_dir=output_dir)
+
+# Plot the first 100 frames and save them to disk.
+mp.plot_frames(0, 100)

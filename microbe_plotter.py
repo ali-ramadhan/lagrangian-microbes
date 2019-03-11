@@ -44,7 +44,8 @@ class MicrobePlotter:
 
         # Choose subset of velocity field we want to use
         nominal_depth = velocity_dataset["depth"].values[0]
-        self.velocity_subdataset = velocity_dataset.sel(depth=nominal_depth)
+        self.velocity_subdataset = velocity_dataset.sel(depth=nominal_depth,
+                                                        latitude=slice(60, 0), longitude=slice(180, 240))
 
         self.grid_times = self.velocity_subdataset["time"].values
         self.grid_lats = self.velocity_subdataset["latitude"].values

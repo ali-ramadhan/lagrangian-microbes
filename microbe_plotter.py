@@ -151,6 +151,8 @@ class MicrobePlotter:
         scissor_patch = Patch(color=SCISSORS_COLOR, label="Scissors")
         ax.legend(handles=[rock_patch, paper_patch, scissor_patch])
 
+        ax.outline_patch.set_edgecolor("white")
+
         png_filename = "lagrangian_microbes_" + str(iteration).zfill(5) + ".png"
         png_filepath = os.path.join(self.output_dir, png_filename)
         logger.info("Saving figure: {:s}".format(png_filepath))

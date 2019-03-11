@@ -4,6 +4,11 @@ from numpy import int8
 # Representing rock, paper, and scissors with simple 8-bit integers.
 ROCK, PAPER, SCISSORS = int8(1), int8(2), int8(3)
 
+# Colors to use for plotting rock, paper, and scissors particles.
+ROCK_COLOR = "red"
+PAPER_COLOR = "limegreen"
+SCISSORS_COLOR = "blue"
+
 
 def rock_paper_scissors_interaction(parameters, microbe_properties, p1, p2):
     pRS, pPR, pSP = parameters["pRS"], parameters["pPR"], parameters["pSP"]

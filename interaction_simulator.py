@@ -38,8 +38,7 @@ class InteractionSimulator:
             logger.info("Creating directory: {:s}".format(output_dir))
             os.makedirs(output_dir)
 
-        pair_interaction_function, pair_interaction_parameters, microbe_properties \
-            = pair_interaction(N_microbes=self.pa.N_particles)
+        pair_interaction_function, pair_interaction_parameters, microbe_properties = pair_interaction
 
         self.pa = particle_advecter
         self.microbe_properties = microbe_properties
@@ -49,10 +48,10 @@ class InteractionSimulator:
         self.interaction_norm = interaction_norm
         self.self_interaction = self_interaction
         self.output_dir = output_dir
+        self.iteration = 0
 
     def time_step(self, start_time, end_time, dt):
         t = start_time
-        iteration = 0
         while t < end_time:
             iters_remaining = (end_time - t) // dt
             iters_to_do = min(self.pa.output_chunk_iters, iters_remaining)
@@ -63,8 +62,8 @@ class InteractionSimulator:
                 logger.info("Will simulate microbe interactions for {:d} iterations to end of simulation."
                             .format(iters_to_do))
 
-            start_iter_str = str(iteration).zfill(5)
-            end_iter_str = str(iteration + iters_to_do).zfill(5)
+            start_iter_str = str(self.iteration).zfill(5)
+            end_iter_str = str(self.iteration + iters_to_do).zfill(5)
 
             chunk_start_time = t
             chunk_end_time = t + iters_to_do*dt
@@ -115,7 +114,7 @@ class InteractionSimulator:
                     self.pair_interaction(self.pair_interaction_parameters, self.microbe_properties, pair[0], pair[1])
                 interaction_time = time() - tic
 
-                pickle_filename = "microbe_properties_" + str(iteration).zfill(5) + ".pickle"
+                pickle_filename = "microbe_properties_" + str(self.iteration).zfill(5) + ".pickle"
                 pickle_filepath = os.path.join(self.output_dir, pickle_filename)
 
                 microbe_output = {
@@ -141,4 +140,4 @@ class InteractionSimulator:
                                     pretty_filesize(pickle_filesize / self.pa.N_particles)))
 
                 t = t + dt
-                iteration = iteration + 1
+                self.iteration += 1

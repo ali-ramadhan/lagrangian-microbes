@@ -3,16 +3,16 @@ import pickle
 from time import time
 from datetime import datetime, timedelta
 
-import numpy as np
-from numpy import float32, zeros, stack
-from scipy.spatial import cKDTree
-import joblib
-
 # Configure logger first before importing any sub-module that depend on the logger being already configured.
 import logging.config
 
 logging.config.fileConfig("logging.ini")
 logger = logging.getLogger(__name__)
+
+import numpy as np
+from numpy import float32, zeros, stack
+from scipy.spatial import cKDTree
+import joblib
 
 from particle_advecter import ParticleAdvecter
 from utils import pretty_time, pretty_filesize
@@ -51,6 +51,7 @@ class InteractionSimulator:
         self.iteration = 0
 
     def time_step(self, start_time, end_time, dt):
+        logger = logging.getLogger(__name__ + "interactions")
         t = start_time
         while t < end_time:
             iters_remaining = (end_time - t) // dt

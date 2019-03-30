@@ -5,12 +5,16 @@ from datetime import datetime, timedelta
 import numpy as np
 from numpy import int8
 
+# Configure logger first before importing any sub-module that depend on the logger being already configured.
+import logging.config
+
+logging.config.fileConfig("logging.ini")
+logger = logging.getLogger(__name__)
+
 from particle_advecter import ParticleAdvecter, uniform_particle_locations
 from interaction_simulator import InteractionSimulator
 from microbe_plotter import MicrobePlotter
 from interactions import rock_paper_scissors
-
-import argparse
 
 parser = argparse.ArgumentParser(description="Simulate some Lagrangian microbes in the Northern Pacific.")
 
@@ -43,6 +47,7 @@ pa.time_step(start_time=start_time, end_time=end_time, dt=dt)
 
 # Create an interaction simulator that uses the rock-paper-scissors pair interaction.
 rps_interaction = rock_paper_scissors(N_microbes=N, pRS=pRS, pPR=pPR, pSP=pSP)
+logger.info(type(rps_interaction))
 isim = InteractionSimulator(pa, pair_interaction=rps_interaction, interaction_radius=0.05, output_dir=interaction_output_dir)
 
 # Simulate the interactions.
@@ -52,4 +57,4 @@ isim.time_step(start_time=start_time, end_time=end_time, dt=dt)
 mp = MicrobePlotter(N_procs=8, dark_theme=True, input_dir=interaction_output_dir, output_dir=plots_output_dir)
 
 # Plot all the frames.
-mp.plot_frames(0, 100)
+mp.plot_frames(0, isim.iteration-1)

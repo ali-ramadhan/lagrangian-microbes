@@ -40,21 +40,20 @@ dt = timedelta(hours=1)
 particle_lons, particle_lats = uniform_particle_locations(N_particles=N, lat_min=20, lat_max=50, lon_min=198, lon_max=208)
 
 # Create a particle advecter that will the advect the particles we just generated in parallel.
-pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=4, velocity_field="OSCAR", output_dir=advection_output_dir)
+# pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=4, velocity_field="OSCAR", output_dir=advection_output_dir)
 
 # Advect the particles.
-pa.time_step(start_time=start_time, end_time=end_time, dt=dt)
+# pa.time_step(start_time=start_time, end_time=end_time, dt=dt)
 
 # Create an interaction simulator that uses the rock-paper-scissors pair interaction.
 rps_interaction = rock_paper_scissors(N_microbes=N, pRS=pRS, pPR=pPR, pSP=pSP)
-logger.info(type(rps_interaction))
-isim = InteractionSimulator(pa, pair_interaction=rps_interaction, interaction_radius=0.05, output_dir=interaction_output_dir)
+# isim = InteractionSimulator(pa, pair_interaction=rps_interaction, interaction_radius=0.05, output_dir=interaction_output_dir)
 
 # Simulate the interactions.
-isim.time_step(start_time=start_time, end_time=end_time, dt=dt)
+# isim.time_step(start_time=start_time, end_time=end_time, dt=dt)
 
 # Create a microbe plotter that will produce a plot of all the microbes at a single iteration.
 mp = MicrobePlotter(N_procs=8, dark_theme=True, input_dir=interaction_output_dir, output_dir=plots_output_dir)
 
 # Plot all the frames.
-mp.plot_frames(0, isim.iteration-1)
+mp.plot_frames(0, 10)

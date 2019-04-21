@@ -9,7 +9,7 @@ from microbe_plotter import MicrobePlotter
 from interactions import rock_paper_scissors
 
 N = 10000  # Number of particles
-output_dir = "/home/gridsan/aramadhan/microbes_output/"  # Output directory for everything.
+output_dir = "/home/alir/cnhlab004/lagrangian_microbes_output/"  # Output directory for everything.
 
 start_time = datetime(2017, 1, 1)
 end_time = datetime(2017, 2, 1)
@@ -25,7 +25,8 @@ pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=4, velocity_field="O
 pa.time_step(start_time=start_time, end_time=end_time, dt=dt)
 
 # Create an interaction simulator that uses the rock-paper-scissors pair interaction.
-isim = InteractionSimulator(pa, pair_interaction=rock_paper_scissors, interaction_radius=0.05, output_dir=output_dir)
+rps_interaction = rock_paper_scissors(N_microbes=N, pRS=0.5, pPR=0.5, pSP=0.5)
+isim = InteractionSimulator(pa, pair_interaction=rps_interaction, interaction_radius=0.05, output_dir=output_dir)
 
 # Simulate the interactions.
 isim.time_step(start_time=start_time, end_time=end_time, dt=dt)

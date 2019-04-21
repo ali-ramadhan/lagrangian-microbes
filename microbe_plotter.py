@@ -72,10 +72,6 @@ def plot_frame_kernel(iteration, input_dir, output_dir, velocity_subdataset, gri
     v_data = velocity_subdataset["v"][u_idx].values
     u_magnitude = np.sqrt(u_data*u_data + v_data*v_data)
 
-    print(u_data.shape)
-    print(v_data.shape)
-    print(u_magnitude.shape)
-
     im = ax.pcolormesh(grid_lons, grid_lats, u_magnitude, transform=vector_crs,
                        vmin=0, vmax=1, cmap="Blues_r")
 
@@ -161,7 +157,11 @@ class MicrobePlotter:
                                   self.microbe_marker_size, self.dark_theme)
         else:
             joblib.Parallel(n_jobs=self.N_procs)(
-                joblib.delayed(self.plot_frame)(i) for i in range(iter_start, iter_end+1)
+                joblib.delayed(plot_frame_kernel)(i, self.input_dir, self.output_dir, self.velocity_subdataset,
+                                                  self.grid_times, self.grid_lons, self.grid_lats,
+                                                  self.vector_crs, self.crs_sps, self.land_50m,
+                                                  self.microbe_marker_size, self.dark_theme)
+                for i in range(iter_start, iter_end+1)
             )
 
     def plot_frame(self, iteration):

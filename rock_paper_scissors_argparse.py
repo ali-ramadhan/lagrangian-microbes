@@ -18,7 +18,7 @@ from interactions import rock_paper_scissors
 
 parser = argparse.ArgumentParser(description="Simulate some Lagrangian microbes in the Northern Pacific.")
 
-parser.add_argument("-N", "--N_particles", type=int, nargs=1, required=True, help="Number of Lagrangian microbes")
+parser.add_argument("-N", "--N-particles", type=int, nargs=1, required=True, help="Number of Lagrangian microbes")
 parser.add_argument("-p", type=float, nargs=1, required=True, help="Interaction probability")
 parser.add_argument("-d", "--output_dir", type=str, nargs=1, required=True, help="Output directory")
 

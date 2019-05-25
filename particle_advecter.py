@@ -281,7 +281,7 @@ class ParticleAdvecter:
                 particle_data["longitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lon"])
                 particle_data["latitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lat"])
 
-            t = t + dt
-            iteration = iteration + 1
+            t = t + iters_to_do * dt
+            iteration = iteration + iters_to_do
 
         particle_data.to_netcdf("particle_locations.nc")

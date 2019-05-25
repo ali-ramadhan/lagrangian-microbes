@@ -35,4 +35,4 @@ isim.time_step(start_time=start_time, end_time=end_time, dt=dt)
 mp = MicrobePlotter(N_procs=1, dark_theme=True, input_dir=output_dir, output_dir=output_dir)
 
 # Plot the first 100 frames and save them to disk.
-mp.plot_frames(0, 100)
+mp.plot_frames(0, 200)

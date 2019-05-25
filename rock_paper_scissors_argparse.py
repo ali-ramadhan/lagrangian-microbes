@@ -53,7 +53,7 @@ rps_interaction = rock_paper_scissors(N_microbes=N, pRS=pRS, pPR=pPR, pSP=pSP)
 # isim.time_step(start_time=start_time, end_time=end_time, dt=dt)
 
 # Create a microbe plotter that will produce a plot of all the microbes at a single iteration.
-mp = MicrobePlotter(N_procs=8, dark_theme=True, input_dir=interaction_output_dir, output_dir=plots_output_dir)
+mp = MicrobePlotter(N_procs=1, dark_theme=True, input_dir=interaction_output_dir, output_dir=plots_output_dir)
 
 # Plot all the frames.
 mp.plot_frames(0, 10)

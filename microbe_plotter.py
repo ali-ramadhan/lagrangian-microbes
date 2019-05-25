@@ -156,11 +156,8 @@ class MicrobePlotter:
                                   self.vector_crs, self.crs_sps, self.land_50m,
                                   self.microbe_marker_size, self.dark_theme)
         else:
-            joblib.Parallel(n_jobs=self.N_procs)(
-                joblib.delayed(plot_frame_kernel)(i, self.input_dir, self.output_dir, self.velocity_subdataset,
-                                                  self.grid_times, self.grid_lons, self.grid_lats,
-                                                  self.vector_crs, self.crs_sps, self.land_50m,
-                                                  self.microbe_marker_size, self.dark_theme)
+            joblib.Parallel(n_jobs=self.N_procs, backend="threading")(
+                joblib.delayed(self.plot_frame)(i)
                 for i in range(iter_start, iter_end+1)
             )
 

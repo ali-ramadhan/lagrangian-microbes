@@ -65,10 +65,11 @@ class MicrobePlotter:
         self.output_dir = output_dir
 
     def plot_frames(self, start_time, end_time, dt):
-        logger.info("Plotting frames from {:d}->{:d} on {:d} processors.".format(start_time, end_time, self.N_procs))
-
         iters = (end_time - start_time) // dt
         times = [start_time + n*dt for n in range(iters)]
+
+        logger.info("Plotting {:d} frames from {:}->{:} on {:d} processors."
+                    .format(iters, start_time, end_time, self.N_procs))
 
         if self.N_procs == 1:
             for i, t in enumerate(times):

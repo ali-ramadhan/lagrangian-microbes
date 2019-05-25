@@ -64,9 +64,6 @@ class MicrobePlotter:
         self.input_dir = input_dir
         self.output_dir = output_dir
 
-        nc_input_filepath = os.path.join(output_dir, "microbe_data.nc")
-        self.microbe_data = xr.open_dataset(nc_input_filepath)
-
     def plot_frames(self, iter_start, iter_end):
         logger.info("Plotting frames {:d}->{:d} on {:d} processors.".format(iter_start, iter_end, self.N_procs))
 
@@ -82,17 +79,20 @@ class MicrobePlotter:
     def plot_frame(self, i):
         logger = logging.getLogger(__name__ + str(i))  # Give each tile/processor its own logger.
 
+        nc_input_filepath = os.path.join(self.output_dir, "microbe_data.nc")
+        microbe_data = xr.open_dataset(nc_input_filepath)
+
         if self.dark_theme:
             plt.style.use("dark_background")
 
         logger.info("Plotting frame {:d}...".format(i))
 
-        frame_time = self.microbe_data["time"][i].values
+        frame_time = microbe_data["time"][i].values
         frame_time = datetime.datetime.utcfromtimestamp(frame_time.tolist() / 1e9)
 
-        microbe_lons = self.microbe_data["longitude"][:, i]
-        microbe_lats = self.microbe_data["latitude"][:, i]
-        species = self.microbe_data["species"][:, i]
+        microbe_lons = microbe_data["longitude"][:, i]
+        microbe_lats = microbe_data["latitude"][:, i]
+        species = microbe_data["species"][:, i]
 
         fig = plt.figure(figsize=(16, 9))
         matplotlib.rcParams.update({'font.size': 10})

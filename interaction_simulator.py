@@ -80,6 +80,9 @@ class InteractionSimulator:
         t = start_time
         while t < end_time:
             i = self.iteration
+
+            logger.info("Simulating interactions for {:} -> {:}...".format(t, t+dt))
+
             microbe_locations = stack((particle_data["longitude"][:, i],
                                        particle_data["latitude"][:, i]), axis=-1)
 

@@ -10,7 +10,8 @@ logging.config.fileConfig("logging.ini")
 logger = logging.getLogger(__name__)
 
 import numpy as np
-from numpy import float32, zeros, stack
+import xarray as xr
+from numpy import float32, int8, zeros, stack
 from scipy.spatial import cKDTree
 import joblib
 
@@ -21,7 +22,6 @@ from utils import pretty_time, pretty_filesize
 class InteractionSimulator:
     def __init__(
             self,
-            particle_advecter,
             pair_interaction,
             interaction_radius,
             interaction_norm=2,
@@ -40,7 +40,6 @@ class InteractionSimulator:
 
         pair_interaction_function, pair_interaction_parameters, microbe_properties = pair_interaction
 
-        self.pa = particle_advecter
         self.microbe_properties = microbe_properties
         self.pair_interaction = pair_interaction_function
         self.pair_interaction_parameters = pair_interaction_parameters
@@ -52,93 +51,70 @@ class InteractionSimulator:
 
     def time_step(self, start_time, end_time, dt):
         logger = logging.getLogger(__name__ + "interactions")
+
+        nc_input_filepath = os.path.join(self.output_dir, "particle_locations.nc")
+        particle_data = xr.open_dataset(nc_input_filepath)
+        N_particles, Nt = particle_data["longitude"].shape
+        times = [start_time + n * dt for n in range(Nt)]
+
+        mlons = zeros((N_particles, Nt), dtype=float32)
+        mlats = zeros((N_particles, Nt), dtype=float32)
+        species = zeros((N_particles, Nt), dtype=int8)
+
+        # This dataset will store all the lat/lon/species positions of each Lagrangian microbe, and will be saved to
+        # NetCDF.
+        microbe_data = xr.Dataset({
+                "longitude": (["particle number", "time"], mlons),
+                "latitude":  (["particle number", "time"], mlats),
+                "species":   (["particle number", "time"], species)
+            },
+            coords={
+                "particle number": range(1, N_particles+1),
+                "time": times
+            }
+        )
+
+        logger.info("Simulating interactions for {:d} microbes over {:d} time steps ({:} -> {:})."
+                    .format(N_particles, Nt, start_time, end_time))
+
         t = start_time
         while t < end_time:
-            iters_remaining = (end_time - t) // dt
-            iters_to_do = min(self.pa.output_chunk_iters, iters_remaining)
+            i = self.iteration
 
-            if iters_to_do == self.pa.output_chunk_iters:
-                logger.info("Will simulate microbe interactions for {:d} iterations.".format(iters_to_do))
-            else:
-                logger.info("Will simulate microbe interactions for {:d} iterations to end of simulation."
-                            .format(iters_to_do))
+            logger.info("Simulating interactions for {:} -> {:}...".format(t, t+dt))
 
-            start_iter_str = str(self.iteration).zfill(5)
-            end_iter_str = str(self.iteration + iters_to_do).zfill(5)
+            microbe_locations = stack((particle_data["longitude"][:, i],
+                                       particle_data["latitude"][:, i]), axis=-1)
 
-            chunk_start_time = t
-            chunk_end_time = t + iters_to_do*dt
-
-            # Pre-allocate memory to store all the microbe locations.
-            microbe_lons = zeros((iters_to_do, self.pa.N_particles), dtype=float32)
-            microbe_lats = zeros((iters_to_do, self.pa.N_particles), dtype=float32)
-
+            logger.info("Building kd-tree... ")
             tic = time()
-            for tile_id in range(self.pa.N_procs):
-                input_filename = "particle_locations_" + start_iter_str + "_" + end_iter_str + \
-                                 "_tile" + str(tile_id).zfill(2) + ".pickle"
-                input_filepath = os.path.join(self.pa.output_dir, input_filename)
-                particle_locations = joblib.load(input_filepath)
+            kdt = cKDTree(np.array(microbe_locations))
+            build_time = time() - tic
 
-                times = particle_locations["time"]
+            logger.info("Querying kd-tree for pairs... ")
+            tic = time()
+            microbe_pairs = kdt.query_pairs(r=self.interaction_radius, p=self.interaction_norm)
+            query_time = time() - tic
 
-                i1 = tile_id * self.pa.particles_per_tile        # Particle starting index
-                i2 = (tile_id + 1) * self.pa.particles_per_tile  # Particle ending index
-                microbe_lons[:, i1:i2] = particle_locations["lon"]
-                microbe_lats[:, i1:i2] = particle_locations["lat"]
+            n_interactions = len(microbe_pairs)
+            logger.info("Simulating {:d} pair-wise interactions...".format(n_interactions))
+            tic = time()
+            for pair in microbe_pairs:
+                self.pair_interaction(self.pair_interaction_parameters, self.microbe_properties, pair[0], pair[1])
+            interaction_time = time() - tic
 
-            toc = time()
-            logger.info("Reading locations of {:d} particles from {:d} files took {:s}."
-                        .format(self.pa.N_particles, self.pa.N_procs, pretty_time(toc - tic)))
+            microbe_data["longitude"][:, i] = particle_data["longitude"][:, i]
+            microbe_data["latitude"][:, i] = particle_data["latitude"][:, i]
+            microbe_data["species"][:, i] = self.microbe_properties["species"]
 
-            logger.info("Simulating interactions (iteration {:} -> {:}): {:} -> {:}..."
-                        .format(start_iter_str, end_iter_str, chunk_start_time, chunk_end_time))
+            logger.info("Building kd-tree:        {:s}.".format(pretty_time(build_time)))
+            logger.info("Querying for pairs:      {:s}.".format(pretty_time(query_time)))
+            logger.info("Simulating interactions: {:s}.".format(pretty_time(interaction_time)))
 
-            for n in range(iters_to_do):
-                microbe_locations = stack((microbe_lons[n, :], microbe_lats[n, :]), axis=-1)
+            t = t + dt
+            self.iteration += 1
 
-                logger.info("Building kd-tree... ")
-                tic = time()
-                kdt = cKDTree(np.array(microbe_locations))
-                build_time = time() - tic
+        nc_output_filepath = os.path.join(self.output_dir, "microbe_data.nc")
 
-                logger.info("Querying kd-tree for pairs... "
-                            .format(self.interaction_radius, self.interaction_norm))
-                tic = time()
-                microbe_pairs = kdt.query_pairs(r=self.interaction_radius, p=self.interaction_norm)
-                query_time = time() - tic
-
-                n_interactions = len(microbe_pairs)
-                logger.info("Simulating {:d} pair-wise interactions...".format(n_interactions))
-                tic = time()
-                for pair in microbe_pairs:
-                    self.pair_interaction(self.pair_interaction_parameters, self.microbe_properties, pair[0], pair[1])
-                interaction_time = time() - tic
-
-                pickle_filename = "microbe_properties_" + str(self.iteration).zfill(5) + ".pickle"
-                pickle_filepath = os.path.join(self.output_dir, pickle_filename)
-
-                microbe_output = {
-                    "time": times[n],
-                    "lon": microbe_lons[n, :],
-                    "lat": microbe_lats[n, :],
-                    "properties": self.microbe_properties
-                }
-
-                tic = time()
-                with open(pickle_filepath, "wb") as f:
-                    logger.info("Saving microbe properties: {:s}".format(pickle_filepath))
-                    joblib.dump(microbe_output, f, compress=("zlib", 3), protocol=pickle.HIGHEST_PROTOCOL)
-
-                pickling_time = time() - tic
-                pickle_filesize = os.path.getsize(pickle_filepath)
-
-                logger.info("Building kd-tree:         {:s}.".format(pretty_time(build_time)))
-                logger.info("Querying for pairs:       {:s}.".format(pretty_time(query_time)))
-                logger.info("Simulating interactions:  {:s}.".format(pretty_time(interaction_time)))
-                logger.info("Pickling and compressing: {:s}. ({:s}, {:s} per particle)"
-                            .format(pretty_time(pickling_time), pretty_filesize(pickle_filesize),
-                                    pretty_filesize(pickle_filesize / self.pa.N_particles)))
-
-                t = t + dt
-                self.iteration += 1
+        logger.info("Writing microbe data to {:s}...".format(nc_output_filepath))
+        microbe_data.to_netcdf(nc_output_filepath)

@@ -4,7 +4,7 @@ from time import time
 from datetime import datetime, timedelta
 
 import numpy as np
-from numpy import linspace, repeat, tile, zeros
+from numpy import float32, linspace, repeat, tile, zeros
 import xarray as xr
 import joblib
 import parcels
@@ -242,8 +242,8 @@ class ParticleAdvecter:
         iters = (end_time - start_time) // dt
         times = [start_time + n*dt for n in range(iters)]
 
-        plons = zeros((self.N_particles, iters))
-        plats = zeros((self.N_particles, iters))
+        plons = zeros((self.N_particles, iters), dtype=float32)
+        plats = zeros((self.N_particles, iters), dtype=float32)
 
         # This dataset will store all the lat/lon positions of each Lagrangian microbe, and will be saved to NetCDF.
         particle_data = xr.Dataset({
@@ -286,5 +286,7 @@ class ParticleAdvecter:
             t = t + iters_to_do * dt
             iteration = iteration + iters_to_do
 
-        nc_filepath = os.path.join(self.output_dir, "particle_locations.nc")
+        nc_filepath = os.path.join(self.output_dir, "particle_data.nc")
+
+        logger.info("Writing particle locations to {:s}...".format(nc_filepath))
         particle_data.to_netcdf(nc_filepath)

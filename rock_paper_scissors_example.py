@@ -1,3 +1,5 @@
+import os
+import glob
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -46,3 +48,6 @@ mp.plot_frames(start_time, end_time, dt)
     .output(os.path.join(output_dir, "movie.mp4"), crf=15, pix_fmt='yuv420p')
     .run()
 )
+
+for fl in glob.glob(os.path.join(output_dir, "*.png")):
+    os.remove(fl)

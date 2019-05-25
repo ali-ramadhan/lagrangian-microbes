@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 from numpy import int8
+import ffmpeg
 
 from particle_advecter import ParticleAdvecter, uniform_particle_locations
 from interaction_simulator import InteractionSimulator
@@ -37,3 +38,11 @@ mp = MicrobePlotter(N_procs=-1, dark_theme=True, input_dir=output_dir, output_di
 
 # Plot the first 100 frames and save them to disk.
 mp.plot_frames(start_time, end_time, dt)
+
+# Make movie!
+(
+    ffmpeg
+    .input(os.path.join(output_dir, "lagrangian_microbes_%05d.png"), framerate=30)
+    .output(os.path.join(output_dir, "movie.mp4"), crf=15, pix_fmt='yuv420p')
+    .run()
+)

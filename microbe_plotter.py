@@ -64,19 +64,22 @@ class MicrobePlotter:
         self.input_dir = input_dir
         self.output_dir = output_dir
 
-    def plot_frames(self, iter_start, iter_end):
-        logger.info("Plotting frames {:d}->{:d} on {:d} processors.".format(iter_start, iter_end, self.N_procs))
+    def plot_frames(self, start_time, end_time, dt):
+        logger.info("Plotting frames from {:d}->{:d} on {:d} processors.".format(start_time, end_time, self.N_procs))
+
+        iters = (end_time - start_time) // dt
+        times = [start_time + n*dt for n in range(iters)]
 
         if self.N_procs == 1:
-            for i in range(iter_start, iter_end+1):
-                self.plot_frame(i)
+            for i, t in enumerate(times):
+                self.plot_frame(i, t)
         else:
             joblib.Parallel(n_jobs=self.N_procs)(
-                joblib.delayed(self.plot_frame)(i)
-                for i in range(iter_start, iter_end+1)
+                joblib.delayed(self.plot_frame)(i, t)
+                for i, t in enumerate(times)
             )
 
-    def plot_frame(self, i):
+    def plot_frame(self, i, frame_time):
         logger = logging.getLogger(__name__ + str(i))  # Give each tile/processor its own logger.
 
         nc_input_filepath = os.path.join(self.output_dir, "microbe_data.nc")
@@ -86,9 +89,6 @@ class MicrobePlotter:
             plt.style.use("dark_background")
 
         logger.info("Plotting frame {:d}...".format(i))
-
-        frame_time = microbe_data["time"][i].values
-        frame_time = datetime.datetime.utcfromtimestamp(frame_time.tolist() / 1e9)
 
         microbe_lons = microbe_data["longitude"][:, i]
         microbe_lats = microbe_data["latitude"][:, i]

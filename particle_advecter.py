@@ -232,3 +232,52 @@ class ParticleAdvecter:
             logger.info("{:s} Pickling and compressing:    {:s}. ({:s}, {:s} per particle per iteration)"
                         .format(tilestamp, pretty_time(pickling_time), pretty_filesize(pickle_filesize),
                                 pretty_filesize(pickle_filesize / (iters_to_do * particles_per_tile))))
+
+    def create_netcdf_file(self, start_time, end_time, dt):
+        t = start_time
+        iteration = 0
+
+        iters = (end_time - start_time) // dt
+        times = [start_time + n*dt for n in range(iters)]
+
+        plons = zeros((self.N_particles, iters))
+        plats = zeros((self.N_particles, iters))
+
+        # This dataset will store all the lat/lon positions of each Lagrangian microbe, and will be saved to NetCDF.
+        particle_data = xr.Dataset({
+                "longitude": (["particle number", "time"], plons),
+                "latitude":  (["particle number", "time"], plats)
+            },
+            coords={
+                "particle number": range(1, self.N_particles+1),
+                "time": times
+            }
+        )
+
+        while t < end_time:
+            iters_remaining = (end_time - t) // dt
+            iters_to_do = min(self.output_chunk_iters, iters_remaining)
+
+            t1 = iteration
+            t2 = iteration + iters_to_do
+
+            start_iter_str = str(t1).zfill(5)
+            end_iter_str = str(t2).zfill(5)
+
+            for tile_id in range(self.N_procs):
+                pkl_filename = "particle_locations_" + start_iter_str + "_" + end_iter_str + \
+                               "_tile" + str(tile_id).zfill(2) + ".pickle"
+                pkl_filepath = os.path.join(self.output_dir, pkl_filename)
+
+                particle_locations_pkl = joblib.load(pkl_filepath)
+
+                i1 = tile_id * self.particles_per_tile        # Particle starting index
+                i2 = (tile_id + 1) * self.particles_per_tile  # Particle ending index
+
+                particle_data["longitude"][i1:i2][t1:t2] = particle_locations_pkl["lon"]
+                particle_data["latitude"][i1:i2][t1:t2] = particle_locations_pkl["lat"]
+
+            t = t + dt
+            iteration = iteration + 1
+
+        particle_data.to_netcdf("particle_locations.nc")

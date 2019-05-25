@@ -30,10 +30,10 @@ rps_interaction = rock_paper_scissors(N_microbes=N, pRS=0.5, pPR=0.5, pSP=0.5)
 isim = InteractionSimulator(pair_interaction=rps_interaction, interaction_radius=0.05, output_dir=output_dir)
 
 # Simulate the interactions.
-isim.time_step(start_time=start_time, end_time=end_time, dt=dt)
+isim.time_step(start_time, end_time, dt)
 
 # Create a microbe plotter that will produce a plot of all the microbes at a single iteration.
-mp = MicrobePlotter(N_procs=1, dark_theme=True, input_dir=output_dir, output_dir=output_dir)
+mp = MicrobePlotter(N_procs=-1, dark_theme=True, input_dir=output_dir, output_dir=output_dir)
 
 # Plot the first 100 frames and save them to disk.
-mp.plot_frames(0, 200)
+mp.plot_frames(start_time, end_time, dt)

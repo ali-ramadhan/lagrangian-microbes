@@ -234,6 +234,8 @@ class ParticleAdvecter:
                                 pretty_filesize(pickle_filesize / (iters_to_do * particles_per_tile))))
 
     def create_netcdf_file(self, start_time, end_time, dt):
+        logger = logging.getLogger(__name__ + "netcdf")
+
         t = start_time
         iteration = 0
 
@@ -269,13 +271,15 @@ class ParticleAdvecter:
                                "_tile" + str(tile_id).zfill(2) + ".pickle"
                 pkl_filepath = os.path.join(self.output_dir, pkl_filename)
 
+                logger.info("Reading particle location: {:s}...".format(pkl_filepath))
+
                 particle_locations_pkl = joblib.load(pkl_filepath)
 
                 i1 = tile_id * self.particles_per_tile        # Particle starting index
                 i2 = (tile_id + 1) * self.particles_per_tile  # Particle ending index
 
-                particle_data["longitude"][i1:i2][t1:t2] = particle_locations_pkl["lon"]
-                particle_data["latitude"][i1:i2][t1:t2] = particle_locations_pkl["lat"]
+                particle_data["longitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lon"])
+                particle_data["latitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lat"])
 
             t = t + dt
             iteration = iteration + 1

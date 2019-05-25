@@ -271,8 +271,7 @@ class ParticleAdvecter:
                                "_tile" + str(tile_id).zfill(2) + ".pickle"
                 pkl_filepath = os.path.join(self.output_dir, pkl_filename)
 
-                logger.info("Reading particle location: {:s}...".format(pkl_filepath))
-
+                logger.info("Collecting particle location from {:s}...".format(pkl_filepath))
                 particle_locations_pkl = joblib.load(pkl_filepath)
 
                 i1 = tile_id * self.particles_per_tile        # Particle starting index
@@ -281,7 +280,11 @@ class ParticleAdvecter:
                 particle_data["longitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lon"])
                 particle_data["latitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lat"])
 
+                logger.debug("Deleting {:s}...".format(pkl_filepath))
+                os.remove(pkl_filepath)
+
             t = t + iters_to_do * dt
             iteration = iteration + iters_to_do
 
-        particle_data.to_netcdf("particle_locations.nc")
+        nc_filepath = os.path.join(self.output_dir, "particle_locations.nc")
+        particle_data.to_netcdf(nc_filepath)

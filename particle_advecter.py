@@ -17,11 +17,11 @@ import logging.config
 logging.config.fileConfig("logging.ini")
 logger = logging.getLogger(__name__)
 
-from velocity_fields import oscar_dataset_opendap_url
+from velocity_fields import oscar_dataset
 from utils import most_symmetric_integer_factorization, closest_hour, pretty_time, pretty_filesize
 
 
-def uniform_particle_locations(N_particles=1, lat_min=None, lat_max=None, lon_min=None, lon_max=None):
+def uniform_particle_locations(N_particles, lat_min, lat_max, lon_min, lon_max):
     # Determine number of particles to generate along each dimension.
     N_particles_lat, N_particles_lon = most_symmetric_integer_factorization(N_particles)
 
@@ -129,16 +129,13 @@ class ParticleAdvecter:
             )
 
     def time_step_tile(self, tile_id, start_time, end_time, dt):
-        tilestamp = "[Tile {:02d}]".format(tile_id) if self.N_procs != 0 else ""
+        tilestamp = "[Tile {:02d}]".format(tile_id) if self.N_procs > 1 else ""
         logger = logging.getLogger(__name__ + tilestamp)  # Give each tile/processor its own logger.
 
         particle_lons, particle_lats = self.particle_lons[tile_id], self.particle_lats[tile_id]
         particles_per_tile = particle_lons.size
 
-        oscar_url = oscar_dataset_opendap_url(start_time.year)
-        logger.info("{:s} Accessing OSCAR dataset over OPeNDAP: {:s}".format(tilestamp, oscar_url))
-
-        velocity_dataset = xr.open_dataset(oscar_url)
+        velocity_dataset = oscar_dataset(start_time.year)
 
         # Choose subset of velocity field we want to use
         nominal_depth = velocity_dataset["depth"].values[0]

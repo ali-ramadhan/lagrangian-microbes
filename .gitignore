@@ -109,6 +109,9 @@ venv.bak/
 # Parcels
 parcels_examples/
 
+# Joblib intermediate output/pickle files
+core.*
+
 # Output data
 *.nc
 *.pickle

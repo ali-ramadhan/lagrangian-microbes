@@ -1,9 +1,11 @@
 import os
+import glob
 import argparse
 from datetime import datetime, timedelta
 
 import numpy as np
 from numpy import int8
+import ffmpeg
 
 # Configure logger first before importing any sub-module that depend on the logger being already configured.
 import logging.config
@@ -36,10 +38,10 @@ end_time = datetime(2018, 2, 1)
 dt = timedelta(hours=1)
 
 # Generate initial locations for each particle.
-particle_lons, particle_lats = uniform_particle_locations(N_particles=N, lat_min=20, lat_max=50, lon_min=198, lon_max=208)
+particle_lons, particle_lats = uniform_particle_locations(N_particles=N, lat_min=25, lat_max=35, lon_min=205, lon_max=215)
 
 # Create a particle advecter that will the advect the particles we just generated in parallel.
-pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=8, velocity_field="OSCAR", output_dir=advection_output_dir)
+pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=8, velocity_field="OSCAR", output_dir=output_dir)
 
 # Advect the particles and save all the data to NetCDF.
 pa.time_step(start_time, end_time, dt)

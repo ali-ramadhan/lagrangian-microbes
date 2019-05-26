@@ -8,9 +8,8 @@ import numpy as np
 import xarray as xr
 import joblib
 import parcels
-from numpy import float32, linspace, repeat, tile, zeros, ones
-from parcels import rng as random
-from joblib import wrap_non_picklable_objects
+from numpy import float32, fabs, sqrt, transpose, linspace, repeat, tile, zeros, ones
+from numpy.random import uniform
 
 # Configure logger first before importing any sub-module that depend on the logger being already configured.
 import logging.config
@@ -65,24 +64,9 @@ def distribute_particles_across_tiles(particle_lons, particle_lats, tiles):
     return particle_lons_tiled, particle_lats_tiled
 
 
-# def IsotropicDiffusion(particle, fieldset, time):
-#     r = 1/3
-#     kh = 1
-#     particle.lat += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
-#     particle.lon += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
-#
-#
-# def isotropic_diffusion_kernel(desired_kh):
-#     """Create and return a kernel for simple Brownian particle diffusion in zonal and meridional direction with
-#     constant diffusivity kh."""
-#
-#     def IsotropicDiffusion(particle, fieldset, time):
-#         r = 1 / 3
-#         kh = 1
-#         particle.lat += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
-#         particle.lon += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
-#
-#     return IsotropicDiffusion
+def isotropic_diffusion(particle):
+    particle.lat += uniform(-1, 1) * sqrt(6 * fabs(particle.dt) * 1e-10)
+    particle.lon += uniform(-1, 1) * sqrt(6 * fabs(particle.dt) * 1e-10)
 
 
 class ParticleAdvecter:
@@ -185,7 +169,8 @@ class ParticleAdvecter:
         u_field = parcels.field.Field(name="U", data=u_data, grid=grid, interp_method="linear")
         v_field = parcels.field.Field(name="V", data=v_data, grid=grid, interp_method="linear")
 
-        Kh_data = self.kh * ones(u_data.shape)
+        Kh = self.kh
+        Kh_data = Kh * ones(u_data.shape)
         Kh_zonal_field = parcels.field.Field(name="Kh_zonal", data=Kh_data, grid=grid, interp_method="linear")
         Kh_meridional_field = parcels.field.Field(name="Kh_meridional", data=Kh_data, grid=grid, interp_method="linear")
 
@@ -196,7 +181,7 @@ class ParticleAdvecter:
         pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
                                              lon=particle_lons, lat=particle_lats)
 
-        # isotropic_diffusion = pset.Kernel(IsotropicDiffusion)
+        IsotropicDiffusion = pset.Kernel(parcels.kernels.diffusion.BrownianMotion2D)
 
         t = start_time
         iteration = 0
@@ -232,10 +217,11 @@ class ParticleAdvecter:
 
             advection_time = 0
             storing_time = 0
+            diffusion_time = 0
 
             for n in range(iters_to_do):
                 tic = time()
-                pset.execute(parcels.AdvectionRK4 + pset.Kernel(parcels.kernels.diffusion.BrownianMotion2D),
+                pset.execute(parcels.AdvectionRK4,
                              runtime=dt, dt=dt, verbose_progress=False, output_file=None)
                 toc = time()
 
@@ -252,6 +238,11 @@ class ParticleAdvecter:
                 toc = time()
                 storing_time += toc - tic
 
+                tic = time()
+                map(isotropic_diffusion, pset)
+                toc = time()
+                diffusion_time += toc - tic
+
             tic = time()
             with open(dump_filepath, "wb") as f:
                 logger.info("{:s} Dumping intermediate output: {:s}".format(tilestamp, dump_filepath))
@@ -263,6 +254,7 @@ class ParticleAdvecter:
 
             logger.info("{:s} Advecting particles:         {:s}.".format(tilestamp, pretty_time(advection_time)))
             logger.info("{:s} Storing intermediate output: {:s}.".format(tilestamp, pretty_time(storing_time)))
+            logger.info("{:s} Diffusing particles:         {:s}.".format(tilestamp, pretty_time(diffusion_time)))
             logger.info("{:s} Pickling and compressing:    {:s}. ({:s}, {:s} per particle per iteration)"
                         .format(tilestamp, pretty_time(pickling_time), pretty_filesize(pickle_filesize),
                                 pretty_filesize(pickle_filesize / (iters_to_do * particles_per_tile))))
@@ -311,8 +303,8 @@ class ParticleAdvecter:
                 i1 = tile_id * self.particles_per_tile        # Particle starting index
                 i2 = (tile_id + 1) * self.particles_per_tile  # Particle ending index
 
-                particle_data["longitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lon"])
-                particle_data["latitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lat"])
+                particle_data["longitude"][i1:i2, t1:t2] = transpose(particle_locations_pkl["lon"])
+                particle_data["latitude"][i1:i2, t1:t2] = transpose(particle_locations_pkl["lat"])
 
                 logger.debug("Deleting {:s}...".format(pkl_filepath))
                 os.remove(pkl_filepath)

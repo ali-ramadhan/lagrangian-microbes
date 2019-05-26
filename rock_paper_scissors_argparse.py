@@ -14,9 +14,10 @@ import ffmpeg
 # logger = logging.getLogger(__name__)
 
 from particle_advecter import ParticleAdvecter, uniform_particle_locations
+from interactions import rock_paper_scissors
 from interaction_simulator import InteractionSimulator
 from microbe_plotter import MicrobePlotter
-from interactions import rock_paper_scissors
+from analysis import species_count_figure
 
 parser = argparse.ArgumentParser(description="Simulate some Lagrangian microbes in the Northern Pacific.")
 
@@ -59,6 +60,9 @@ mp = MicrobePlotter(N_procs=-1, dark_theme=True, input_dir=output_dir, output_di
 
 # Plot the first 100 frames and save them to disk.
 mp.plot_frames(start_time, end_time, dt)
+
+# Produce species count figure.
+species_count_figure(output_dir, start_time, end_time, dt)
 
 # Make movie!
 (

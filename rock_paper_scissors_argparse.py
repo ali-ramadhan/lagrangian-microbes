@@ -35,7 +35,7 @@ pRS, pPR, pSP = p, p, p + a
 output_dir = os.path.join(base_dir, "N" + str(N) + "_Kh" + str(Kh) + "_p" + str(p) + "_a" + str(a))
 
 start_time = datetime(2018, 1, 1)
-end_time = datetime(2018, 2, 1)
+end_time = datetime(2018, 12, 31)
 dt = timedelta(hours=1)
 
 # Generate initial locations for each particle.

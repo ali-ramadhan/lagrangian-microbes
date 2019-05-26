@@ -64,11 +64,6 @@ def distribute_particles_across_tiles(particle_lons, particle_lats, tiles):
     return particle_lons_tiled, particle_lats_tiled
 
 
-def isotropic_diffusion(particle):
-    particle.lat += uniform(-1, 1) * sqrt(6 * fabs(particle.dt) * 1e-10)
-    particle.lon += uniform(-1, 1) * sqrt(6 * fabs(particle.dt) * 1e-10)
-
-
 class ParticleAdvecter:
     def __init__(
         self,
@@ -78,7 +73,7 @@ class ParticleAdvecter:
         velocity_field="OSCAR",
         output_dir=".",
         output_chunk_iters=100,
-        kh=0
+        Kh=0
     ):
         assert velocity_field == "OSCAR", "OSCAR is the only supported velocity field right now."
 
@@ -120,7 +115,7 @@ class ParticleAdvecter:
         self.particles_per_tile = N_particles // N_procs
         self.output_dir = output_dir
         self.output_chunk_iters = output_chunk_iters
-        self.kh = kh
+        self.Kh = Kh
 
     def time_step(self, start_time, end_time, dt):
         logger.info("Starting time stepping: {:} -> {:} (dt={:}) on {:d} processors."
@@ -168,20 +163,10 @@ class ParticleAdvecter:
 
         u_field = parcels.field.Field(name="U", data=u_data, grid=grid, interp_method="linear")
         v_field = parcels.field.Field(name="V", data=v_data, grid=grid, interp_method="linear")
-
-        Kh = self.kh
-        Kh_data = Kh * ones(u_data.shape)
-        Kh_zonal_field = parcels.field.Field(name="Kh_zonal", data=Kh_data, grid=grid, interp_method="linear")
-        Kh_meridional_field = parcels.field.Field(name="Kh_meridional", data=Kh_data, grid=grid, interp_method="linear")
-
         fieldset = parcels.fieldset.FieldSet(u_field, v_field)
-        fieldset.add_field(Kh_zonal_field, name="Kh_zonal")
-        fieldset.add_field(Kh_meridional_field, name="Kh_meridional")
 
         pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
                                              lon=particle_lons, lat=particle_lats)
-
-        IsotropicDiffusion = pset.Kernel(parcels.kernels.diffusion.BrownianMotion2D)
 
         t = start_time
         iteration = 0
@@ -239,7 +224,9 @@ class ParticleAdvecter:
                 storing_time += toc - tic
 
                 tic = time()
-                map(isotropic_diffusion, pset)
+                for p in pset:
+                    p.lat += uniform(-1, 1) * sqrt(6 * fabs(p.dt) * self.Kh)
+                    p.lon += uniform(-1, 1) * sqrt(6 * fabs(p.dt) * self.Kh)
                 toc = time()
                 diffusion_time += toc - tic
 

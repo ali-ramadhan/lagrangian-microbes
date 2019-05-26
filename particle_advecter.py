@@ -1,13 +1,15 @@
 import os
 import pickle
+import math
 from time import time
 from datetime import datetime, timedelta
 
 import numpy as np
-from numpy import float32, linspace, repeat, tile, zeros
 import xarray as xr
 import joblib
 import parcels
+from numpy import float32, linspace, repeat, tile, zeros
+from parcels import rng as random
 
 # Configure logger first before importing any sub-module that depend on the logger being already configured.
 import logging.config
@@ -62,6 +64,17 @@ def distribute_particles_across_tiles(particle_lons, particle_lats, tiles):
     return particle_lons_tiled, particle_lats_tiled
 
 
+def isotropic_diffusion_kernel(kh):
+    """Create and return a kernel for simple Brownian particle diffusion in zonal and meridional direction with
+    constant diffusivity kh."""
+    def IsotropicDiffusion(particle, fieldset, time):
+        r = 1/3
+        particle.lat += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
+        particle.lon += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
+
+    return IsotropicDiffusion
+
+
 class ParticleAdvecter:
     def __init__(
         self,
@@ -70,7 +83,8 @@ class ParticleAdvecter:
         N_procs=-1,
         velocity_field="OSCAR",
         output_dir=".",
-        output_chunk_iters=100
+        output_chunk_iters=100,
+        kh=0
     ):
         assert velocity_field == "OSCAR", "OSCAR is the only supported velocity field right now."
 
@@ -112,6 +126,7 @@ class ParticleAdvecter:
         self.particles_per_tile = N_particles // N_procs
         self.output_dir = output_dir
         self.output_chunk_iters = output_chunk_iters
+        self.kh = kh
 
     def time_step(self, start_time, end_time, dt):
         logger.info("Starting time stepping: {:} -> {:} (dt={:}) on {:d} processors."
@@ -165,6 +180,8 @@ class ParticleAdvecter:
         pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
                                              lon=particle_lons, lat=particle_lats)
 
+        isotropic_diffusion = pset.Kernel(isotropic_diffusion_kernel(self.kh))
+
         t = start_time
         iteration = 0
         while t < end_time:
@@ -202,7 +219,8 @@ class ParticleAdvecter:
 
             for n in range(iters_to_do):
                 tic = time()
-                pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
+                pset.execute(parcels.AdvectionRK4 + isotropic_diffusion,
+                             runtime=dt, dt=dt, verbose_progress=False, output_file=None)
                 toc = time()
 
                 t = t + dt

@@ -129,7 +129,7 @@ class ParticleAdvecter:
             )
 
     def time_step_tile(self, tile_id, start_time, end_time, dt):
-        tilestamp = "[Tile {:02d}]".format(tile_id)
+        tilestamp = "[Tile {:02d}]".format(tile_id) if self.N_procs != 0 else ""
         logger = logging.getLogger(__name__ + tilestamp)  # Give each tile/processor its own logger.
 
         particle_lons, particle_lats = self.particle_lons[tile_id], self.particle_lats[tile_id]

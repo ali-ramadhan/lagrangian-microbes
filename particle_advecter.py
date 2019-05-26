@@ -1,13 +1,15 @@
 import os
 import pickle
+import math
 from time import time
 from datetime import datetime, timedelta
 
 import numpy as np
-from numpy import float32, linspace, repeat, tile, zeros
 import xarray as xr
 import joblib
 import parcels
+from numpy import float32, fabs, sqrt, transpose, linspace, repeat, tile, zeros, ones
+from numpy.random import uniform
 
 # Configure logger first before importing any sub-module that depend on the logger being already configured.
 import logging.config
@@ -70,7 +72,8 @@ class ParticleAdvecter:
         N_procs=-1,
         velocity_field="OSCAR",
         output_dir=".",
-        output_chunk_iters=100
+        output_chunk_iters=100,
+        Kh=0
     ):
         assert velocity_field == "OSCAR", "OSCAR is the only supported velocity field right now."
 
@@ -112,6 +115,7 @@ class ParticleAdvecter:
         self.particles_per_tile = N_particles // N_procs
         self.output_dir = output_dir
         self.output_chunk_iters = output_chunk_iters
+        self.Kh = Kh / 1e10  # Converting diffusivity from [m^2/s] -> [deg^2/s]
 
     def time_step(self, start_time, end_time, dt):
         logger.info("Starting time stepping: {:} -> {:} (dt={:}) on {:d} processors."
@@ -125,7 +129,7 @@ class ParticleAdvecter:
             )
 
     def time_step_tile(self, tile_id, start_time, end_time, dt):
-        tilestamp = "[Tile {:02d}]".format(tile_id)
+        tilestamp = "[Tile {:02d}]".format(tile_id) if self.N_procs != 0 else ""
         logger = logging.getLogger(__name__ + tilestamp)  # Give each tile/processor its own logger.
 
         particle_lons, particle_lats = self.particle_lons[tile_id], self.particle_lats[tile_id]
@@ -159,7 +163,6 @@ class ParticleAdvecter:
 
         u_field = parcels.field.Field(name="U", data=u_data, grid=grid, interp_method="linear")
         v_field = parcels.field.Field(name="V", data=v_data, grid=grid, interp_method="linear")
-
         fieldset = parcels.fieldset.FieldSet(u_field, v_field)
 
         pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
@@ -170,11 +173,6 @@ class ParticleAdvecter:
         while t < end_time:
             iters_remaining = (end_time - t) // dt
             iters_to_do = min(self.output_chunk_iters, iters_remaining)
-
-            if iters_to_do == self.output_chunk_iters:
-                logger.info("{:s} Will advect for {:d} iterations.".format(tilestamp, iters_to_do))
-            else:
-                logger.info("{:s} Will advect for {:d} iterations to end of simulation.".format(tilestamp, iters_to_do))
 
             start_iter_str = str(iteration).zfill(5)
             end_iter_str = str(iteration + iters_to_do).zfill(5)
@@ -199,10 +197,12 @@ class ParticleAdvecter:
 
             advection_time = 0
             storing_time = 0
+            diffusion_time = 0
 
             for n in range(iters_to_do):
                 tic = time()
-                pset.execute(parcels.AdvectionRK4, runtime=dt, dt=dt, verbose_progress=False, output_file=None)
+                pset.execute(parcels.AdvectionRK4,
+                             runtime=dt, dt=dt, verbose_progress=False, output_file=None)
                 toc = time()
 
                 t = t + dt
@@ -218,6 +218,13 @@ class ParticleAdvecter:
                 toc = time()
                 storing_time += toc - tic
 
+                tic = time()
+                for p in pset:
+                    p.lat += uniform(-1, 1) * sqrt(6 * fabs(p.dt) * self.Kh)
+                    p.lon += uniform(-1, 1) * sqrt(6 * fabs(p.dt) * self.Kh)
+                toc = time()
+                diffusion_time += toc - tic
+
             tic = time()
             with open(dump_filepath, "wb") as f:
                 logger.info("{:s} Dumping intermediate output: {:s}".format(tilestamp, dump_filepath))
@@ -229,6 +236,7 @@ class ParticleAdvecter:
 
             logger.info("{:s} Advecting particles:         {:s}.".format(tilestamp, pretty_time(advection_time)))
             logger.info("{:s} Storing intermediate output: {:s}.".format(tilestamp, pretty_time(storing_time)))
+            logger.info("{:s} Diffusing particles:         {:s}.".format(tilestamp, pretty_time(diffusion_time)))
             logger.info("{:s} Pickling and compressing:    {:s}. ({:s}, {:s} per particle per iteration)"
                         .format(tilestamp, pretty_time(pickling_time), pretty_filesize(pickle_filesize),
                                 pretty_filesize(pickle_filesize / (iters_to_do * particles_per_tile))))
@@ -277,8 +285,8 @@ class ParticleAdvecter:
                 i1 = tile_id * self.particles_per_tile        # Particle starting index
                 i2 = (tile_id + 1) * self.particles_per_tile  # Particle ending index
 
-                particle_data["longitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lon"])
-                particle_data["latitude"][i1:i2, t1:t2] = np.transpose(particle_locations_pkl["lat"])
+                particle_data["longitude"][i1:i2, t1:t2] = transpose(particle_locations_pkl["lon"])
+                particle_data["latitude"][i1:i2, t1:t2] = transpose(particle_locations_pkl["lat"])
 
                 logger.debug("Deleting {:s}...".format(pkl_filepath))
                 os.remove(pkl_filepath)

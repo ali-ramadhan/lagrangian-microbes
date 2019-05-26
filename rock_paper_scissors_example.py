@@ -22,7 +22,7 @@ dt = timedelta(hours=1)
 particle_lons, particle_lats = uniform_particle_locations(N_particles=N, lat_min=25, lat_max=35, lon_min=205, lon_max=215)
 
 # Create a particle advecter that will the advect the particles we just generated on 4 processors.
-pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=4, velocity_field="OSCAR", output_dir=output_dir)
+pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=4, velocity_field="OSCAR", output_dir=output_dir, Kh=100)
 
 # Advect the particles and save all the data to NetCDF.
 pa.time_step(start_time, end_time, dt)

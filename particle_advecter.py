@@ -115,7 +115,7 @@ class ParticleAdvecter:
         self.particles_per_tile = N_particles // N_procs
         self.output_dir = output_dir
         self.output_chunk_iters = output_chunk_iters
-        self.Kh = Kh
+        self.Kh = Kh / 1e10  # Converting diffusivity from [m^2/s] -> [deg^2/s]
 
     def time_step(self, start_time, end_time, dt):
         logger.info("Starting time stepping: {:} -> {:} (dt={:}) on {:d} processors."

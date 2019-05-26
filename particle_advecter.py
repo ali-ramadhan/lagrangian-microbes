@@ -8,8 +8,9 @@ import numpy as np
 import xarray as xr
 import joblib
 import parcels
-from numpy import float32, linspace, repeat, tile, zeros
+from numpy import float32, linspace, repeat, tile, zeros, ones
 from parcels import rng as random
+from joblib import wrap_non_picklable_objects
 
 # Configure logger first before importing any sub-module that depend on the logger being already configured.
 import logging.config
@@ -64,15 +65,24 @@ def distribute_particles_across_tiles(particle_lons, particle_lats, tiles):
     return particle_lons_tiled, particle_lats_tiled
 
 
-def isotropic_diffusion_kernel(kh):
-    """Create and return a kernel for simple Brownian particle diffusion in zonal and meridional direction with
-    constant diffusivity kh."""
-    def IsotropicDiffusion(particle, fieldset, time):
-        r = 1/3
-        particle.lat += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
-        particle.lon += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
-
-    return IsotropicDiffusion
+# def IsotropicDiffusion(particle, fieldset, time):
+#     r = 1/3
+#     kh = 1
+#     particle.lat += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
+#     particle.lon += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
+#
+#
+# def isotropic_diffusion_kernel(desired_kh):
+#     """Create and return a kernel for simple Brownian particle diffusion in zonal and meridional direction with
+#     constant diffusivity kh."""
+#
+#     def IsotropicDiffusion(particle, fieldset, time):
+#         r = 1 / 3
+#         kh = 1
+#         particle.lat += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
+#         particle.lon += random.uniform(-1, 1) * math.sqrt(2 * math.fabs(particle.dt) * kh / r)
+#
+#     return IsotropicDiffusion
 
 
 class ParticleAdvecter:
@@ -175,12 +185,18 @@ class ParticleAdvecter:
         u_field = parcels.field.Field(name="U", data=u_data, grid=grid, interp_method="linear")
         v_field = parcels.field.Field(name="V", data=v_data, grid=grid, interp_method="linear")
 
+        Kh_data = self.kh * ones(u_data.shape)
+        Kh_zonal_field = parcels.field.Field(name="Kh_zonal", data=Kh_data, grid=grid, interp_method="linear")
+        Kh_meridional_field = parcels.field.Field(name="Kh_meridional", data=Kh_data, grid=grid, interp_method="linear")
+
         fieldset = parcels.fieldset.FieldSet(u_field, v_field)
+        fieldset.add_field(Kh_zonal_field, name="Kh_zonal")
+        fieldset.add_field(Kh_meridional_field, name="Kh_meridional")
 
         pset = parcels.ParticleSet.from_list(fieldset=fieldset, pclass=parcels.JITParticle,
                                              lon=particle_lons, lat=particle_lats)
 
-        isotropic_diffusion = pset.Kernel(isotropic_diffusion_kernel(self.kh))
+        # isotropic_diffusion = pset.Kernel(IsotropicDiffusion)
 
         t = start_time
         iteration = 0
@@ -219,7 +235,7 @@ class ParticleAdvecter:
 
             for n in range(iters_to_do):
                 tic = time()
-                pset.execute(parcels.AdvectionRK4 + isotropic_diffusion,
+                pset.execute(parcels.AdvectionRK4 + pset.Kernel(parcels.kernels.diffusion.BrownianMotion2D),
                              runtime=dt, dt=dt, verbose_progress=False, output_file=None)
                 toc = time()
 

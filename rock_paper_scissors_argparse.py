@@ -21,14 +21,15 @@ parser = argparse.ArgumentParser(description="Simulate some Lagrangian microbes 
 parser.add_argument("-N", "--N-particles", type=int, required=True, help="Number of Lagrangian microbes")
 parser.add_argument("-K", "--Kh", type=float, required=True, help="Isotropic horizontal diffusivity")
 parser.add_argument("-p", type=float, required=True, help="Interaction probability")
+parser.add_argument("-a", type=float, required=True, help="Asymmetric factor in rock-paper interaction")
 parser.add_argument("-d", "--output_dir", type=str, required=True, help="Output directory")
 
 args = parser.parse_args()
-N, Kh, p, base_dir = args.N_particles, args.Kh, args.p, args.output_dir
-pRS, pPR, pSP = p, p, p
+N, Kh, p, a, base_dir = args.N_particles, args.Kh, args.p, args.a, args.output_dir
+pRS, pPR, pSP = p, p, p + a
 
 # Output directories.
-output_dir = os.path.join(base_dir, "N" + str(N) + "_Kh" + str(Kh) + "_p" + str(p))
+output_dir = os.path.join(base_dir, "N" + str(N) + "_Kh" + str(Kh) + "_p" + str(p) + "_a" + str(a))
 
 start_time = datetime(2018, 1, 1)
 end_time = datetime(2018, 2, 1)
@@ -38,7 +39,7 @@ dt = timedelta(hours=1)
 particle_lons, particle_lats = uniform_particle_locations(N_particles=N, lat_min=20, lat_max=50, lon_min=198, lon_max=208)
 
 # Create a particle advecter that will the advect the particles we just generated in parallel.
-pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=4, velocity_field="OSCAR", output_dir=advection_output_dir)
+pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=8, velocity_field="OSCAR", output_dir=advection_output_dir)
 
 # Advect the particles and save all the data to NetCDF.
 pa.time_step(start_time, end_time, dt)

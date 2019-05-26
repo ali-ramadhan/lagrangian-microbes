@@ -174,11 +174,6 @@ class ParticleAdvecter:
             iters_remaining = (end_time - t) // dt
             iters_to_do = min(self.output_chunk_iters, iters_remaining)
 
-            if iters_to_do == self.output_chunk_iters:
-                logger.info("{:s} Will advect for {:d} iterations.".format(tilestamp, iters_to_do))
-            else:
-                logger.info("{:s} Will advect for {:d} iterations to end of simulation.".format(tilestamp, iters_to_do))
-
             start_iter_str = str(iteration).zfill(5)
             end_iter_str = str(iteration + iters_to_do).zfill(5)
 

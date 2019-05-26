@@ -23,7 +23,7 @@ import logging.config
 logging.config.fileConfig("logging.ini")
 logger = logging.getLogger(__name__)
 
-from velocity_fields import oscar_dataset_opendap_url
+from velocity_fields import oscar_dataset
 from interactions import ROCK, PAPER, SCISSORS, ROCK_COLOR, PAPER_COLOR, SCISSORS_COLOR
 
 
@@ -36,16 +36,13 @@ class MicrobePlotter:
             input_dir=".",
             output_dir=".",
     ):
-        # oscar_url = oscar_dataset_opendap_url(2017)
-        # logger.info("Accessing OSCAR dataset over OPeNDAP: {:s}".format(oscar_url))
+        # velocity_dataset = oscar_dataset(2018)
         #
-        # velocity_dataset = xr.open_dataset(oscar_url)
-
         # # Choose subset of velocity field we want to use
         # nominal_depth = velocity_dataset["depth"].values[0]
         # self.velocity_subdataset = velocity_dataset.sel(depth=nominal_depth,
         #                                                 latitude=slice(60, 0), longitude=slice(180, 240))
-
+        #
         # self.grid_times = self.velocity_subdataset["time"].values
         # self.grid_lats = self.velocity_subdataset["latitude"].values
         # self.grid_lons = self.velocity_subdataset["longitude"].values

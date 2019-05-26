@@ -7,11 +7,11 @@ import numpy as np
 from numpy import int8
 import ffmpeg
 
-# Configure logger first before importing any sub-module that depend on the logger being already configured.
-import logging.config
-
-logging.config.fileConfig("logging.ini")
-logger = logging.getLogger(__name__)
+# # Configure logger first before importing any sub-module that depend on the logger being already configured.
+# import logging.config
+#
+# logging.config.fileConfig("logging.ini")
+# logger = logging.getLogger(__name__)
 
 from particle_advecter import ParticleAdvecter, uniform_particle_locations
 from interaction_simulator import InteractionSimulator
@@ -41,7 +41,7 @@ dt = timedelta(hours=1)
 particle_lons, particle_lats = uniform_particle_locations(N_particles=N, lat_min=25, lat_max=35, lon_min=205, lon_max=215)
 
 # Create a particle advecter that will the advect the particles we just generated in parallel.
-pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=8, velocity_field="OSCAR", output_dir=output_dir)
+pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=25, velocity_field="OSCAR", output_dir=output_dir)
 
 # Advect the particles and save all the data to NetCDF.
 pa.time_step(start_time, end_time, dt)

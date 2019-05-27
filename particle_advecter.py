@@ -1,7 +1,9 @@
 import os
+import re
 import pickle
 import math
 from time import time
+from glob import glob
 from datetime import datetime, timedelta
 
 import numpy as np
@@ -107,6 +109,7 @@ class ParticleAdvecter:
 
         assert output_chunk_iters >= 1
 
+        self.iteration = 0
         self.particle_lons = particle_lons
         self.particle_lats = particle_lats
         self.velocity_field = velocity_field
@@ -118,7 +121,23 @@ class ParticleAdvecter:
         self.Kh = Kh / 1e10  # Converting diffusivity from [m^2/s] -> [deg^2/s] assuming 1 deg = 100 km.
 
     def time_step(self, start_time, end_time, dt):
-        logger.info("Starting time stepping: {:} -> {:} (dt={:}) on {:d} processors."
+        if self.iteration != 0:
+            logger.info("Restoring particle locations from disk...")
+
+            pkl_files = glob(os.path.join(self.output_dir, "particle_locations_*.pickle"))
+            pkl_files.sort()
+
+            for pkl_filepath in pkl_files[-self.N_procs:]:
+                logger.info("Restoring particle locations from {:s}...".format(pkl_filepath))
+
+                filename = os.path.basename(pkl_filepath)
+                tile_id = int(filename.split("_")[4][4:6])
+
+                particle_locations_pkl = joblib.load(pkl_filepath)
+                self.particle_lons[tile_id] = particle_locations_pkl["lon"][-1, :]
+                self.particle_lats[tile_id] = particle_locations_pkl["lat"][-1, :]
+
+        logger.info("Starting time stepping: {:} -> {:} (dt={:}) on {:d} processor(s)."
                     .format(start_time, end_time, dt, self.N_procs))
 
         if self.N_procs == 1:
@@ -127,6 +146,9 @@ class ParticleAdvecter:
             joblib.Parallel(n_jobs=self.N_procs)(
                 joblib.delayed(self.time_step_tile)(tile_id, start_time, end_time, dt) for tile_id in range(self.N_procs)
             )
+
+        iters = (end_time - start_time) // dt
+        self.iteration += iters
 
     def time_step_tile(self, tile_id, start_time, end_time, dt):
         tilestamp = "[Tile {:02d}]".format(tile_id) if self.N_procs > 1 else ""
@@ -150,8 +172,7 @@ class ParticleAdvecter:
         grid_times = np.array([(grid_times[i] - grid_times[0]) // np.timedelta64(1, "s")
                                for i in range(grid_times.size)])
 
-        logger.info("{:s} Building parcels grid, fields, and particle set... "
-                    "(this might take a long time as tons of data is downloaded over OPeNDAP)".format(tilestamp))
+        logger.info("{:s} Building parcels grid, fields, and particle set...".format(tilestamp))
 
         grid = parcels.grid.RectilinearZGrid(grid_lons, grid_lats, depth=grid_depth, time=grid_times, mesh="spherical")
 
@@ -166,7 +187,7 @@ class ParticleAdvecter:
                                              lon=particle_lons, lat=particle_lats)
 
         t = start_time
-        iteration = 0
+        iteration = self.iteration
         while t < end_time:
             iters_remaining = (end_time - t) // dt
             iters_to_do = min(self.output_chunk_iters, iters_remaining)
@@ -241,9 +262,6 @@ class ParticleAdvecter:
     def create_netcdf_file(self, start_time, end_time, dt):
         logger = logging.getLogger(__name__ + "netcdf")
 
-        t = start_time
-        iteration = 0
-
         iters = (end_time - start_time) // dt
         times = [start_time + n*dt for n in range(iters)]
 
@@ -261,37 +279,29 @@ class ParticleAdvecter:
             }
         )
 
-        while t < end_time:
-            iters_remaining = (end_time - t) // dt
-            iters_to_do = min(self.output_chunk_iters, iters_remaining)
+        pkl_files = glob(os.path.join(self.output_dir, "particle_locations_*.pickle"))
+        pkl_files.sort()
 
-            t1 = iteration
-            t2 = iteration + iters_to_do
+        for pkl_filepath in pkl_files:
+            logger.info("Collecting particle locations from {:s}...".format(pkl_filepath))
 
-            start_iter_str = str(t1).zfill(5)
-            end_iter_str = str(t2).zfill(5)
+            filename = os.path.basename(pkl_filepath)
+            t1 = int(filename.split("_")[2])  # Starting iteration
+            t2 = int(filename.split("_")[3])  # Ending iteration
+            tile_id = int(filename.split("_")[4][4:6])
 
-            for tile_id in range(self.N_procs):
-                pkl_filename = "particle_locations_" + start_iter_str + "_" + end_iter_str + \
-                               "_tile" + str(tile_id).zfill(2) + ".pickle"
-                pkl_filepath = os.path.join(self.output_dir, pkl_filename)
+            particle_locations_pkl = joblib.load(pkl_filepath)
 
-                logger.info("Collecting particle location from {:s}...".format(pkl_filepath))
-                particle_locations_pkl = joblib.load(pkl_filepath)
+            i1 = tile_id * self.particles_per_tile  # Particle starting index
+            i2 = (tile_id + 1) * self.particles_per_tile  # Particle ending index
 
-                i1 = tile_id * self.particles_per_tile        # Particle starting index
-                i2 = (tile_id + 1) * self.particles_per_tile  # Particle ending index
-
-                particle_data["longitude"][i1:i2, t1:t2] = transpose(particle_locations_pkl["lon"])
-                particle_data["latitude"][i1:i2, t1:t2] = transpose(particle_locations_pkl["lat"])
-
-                logger.debug("Deleting {:s}...".format(pkl_filepath))
-                os.remove(pkl_filepath)
-
-            t = t + iters_to_do * dt
-            iteration = iteration + iters_to_do
+            particle_data["longitude"][i1:i2, t1:t2] = transpose(particle_locations_pkl["lon"])
+            particle_data["latitude"][i1:i2, t1:t2] = transpose(particle_locations_pkl["lat"])
 
         nc_filepath = os.path.join(self.output_dir, "particle_data.nc")
-
         logger.info("Writing particle locations to {:s}...".format(nc_filepath))
         particle_data.to_netcdf(nc_filepath)
+
+        for pkl_filepath in pkl_files:
+            logger.debug("Deleting {:s}...".format(pkl_filepath))
+            os.remove(pkl_filepath)

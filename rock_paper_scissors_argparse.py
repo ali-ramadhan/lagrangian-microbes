@@ -35,7 +35,8 @@ pRS, pPR, pSP = p, p, p + a
 output_dir = os.path.join(base_dir, "N" + str(N) + "_Kh" + str(Kh) + "_p" + str(p) + "_a" + str(a))
 
 start_time = datetime(2018, 1, 1)
-end_time = datetime(2018, 12, 31)
+mid_time = datetime(2018, 7, 1)
+end_time = datetime(2019, 1, 1)
 dt = timedelta(hours=1)
 
 # Generate initial locations for each particle.
@@ -45,7 +46,8 @@ particle_lons, particle_lats = uniform_particle_locations(N_particles=N, lat_min
 pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=25, velocity_field="OSCAR", output_dir=output_dir, Kh=Kh)
 
 # Advect the particles and save all the data to NetCDF.
-pa.time_step(start_time, end_time, dt)
+pa.time_step(start_time, mid_time, dt)
+pa.time_step(mid_time, end_time, dt)
 pa.create_netcdf_file(start_time, end_time, dt)
 
 # Create an interaction simulator that uses the rock-paper-scissors pair interaction.

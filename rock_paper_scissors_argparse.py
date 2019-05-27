@@ -36,7 +36,7 @@ output_dir = os.path.join(base_dir, "N" + str(N) + "_Kh" + str(Kh) + "_p" + str(
 
 start_time = datetime(2018, 1, 1)
 mid_time = datetime(2018, 7, 1)
-end_time = datetime(2018, 12, 31)
+end_time = datetime(2019, 1, 1)
 dt = timedelta(hours=1)
 
 # Generate initial locations for each particle.

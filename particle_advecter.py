@@ -121,7 +121,23 @@ class ParticleAdvecter:
         self.Kh = Kh / 1e10  # Converting diffusivity from [m^2/s] -> [deg^2/s] assuming 1 deg = 100 km.
 
     def time_step(self, start_time, end_time, dt):
-        logger.info("Starting time stepping: {:} -> {:} (dt={:}) on {:d} processors."
+        if self.iteration != 0:
+            logger.info("Restoring particle locations from disk...")
+
+            pkl_files = glob(os.path.join(self.output_dir, "particle_locations_*.pickle"))
+            pkl_files.sort()
+
+            for pkl_filepath in pkl_files[-self.N_procs:]:
+                logger.info("Restoring particle locations from {:s}...".format(pkl_filepath))
+
+                filename = os.path.basename(pkl_filepath)
+                tile_id = int(filename.split("_")[4][4:6])
+
+                particle_locations_pkl = joblib.load(pkl_filepath)
+                self.particle_lons[tile_id] = particle_locations_pkl["lon"][-1, :]
+                self.particle_lats[tile_id] = particle_locations_pkl["lat"][-1, :]
+
+        logger.info("Starting time stepping: {:} -> {:} (dt={:}) on {:d} processor(s)."
                     .format(start_time, end_time, dt, self.N_procs))
 
         if self.N_procs == 1:
@@ -242,11 +258,6 @@ class ParticleAdvecter:
             logger.info("{:s} Pickling and compressing:    {:s}. ({:s}, {:s} per particle per iteration)"
                         .format(tilestamp, pretty_time(pickling_time), pretty_filesize(pickle_filesize),
                                 pretty_filesize(pickle_filesize / (iters_to_do * particles_per_tile))))
-
-        logger.info("{:s} Saving particle locations...".format(tilestamp))
-        for i, p in enumerate(pset):
-            self.particle_lons[tile_id][i] = p.lon
-            self.particle_lats[tile_id][i] = p.lat
 
     def create_netcdf_file(self, start_time, end_time, dt):
         logger = logging.getLogger(__name__ + "netcdf")

@@ -107,6 +107,7 @@ class ParticleAdvecter:
 
         assert output_chunk_iters >= 1
 
+        self.iteration = 0
         self.particle_lons = particle_lons
         self.particle_lats = particle_lats
         self.velocity_field = velocity_field
@@ -127,6 +128,9 @@ class ParticleAdvecter:
             joblib.Parallel(n_jobs=self.N_procs)(
                 joblib.delayed(self.time_step_tile)(tile_id, start_time, end_time, dt) for tile_id in range(self.N_procs)
             )
+
+        iters = (end_time - start_time) // dt
+        self.iteration += iters
 
     def time_step_tile(self, tile_id, start_time, end_time, dt):
         tilestamp = "[Tile {:02d}]".format(tile_id) if self.N_procs > 1 else ""
@@ -166,7 +170,7 @@ class ParticleAdvecter:
                                              lon=particle_lons, lat=particle_lats)
 
         t = start_time
-        iteration = 0
+        iteration = self.iteration
         while t < end_time:
             iters_remaining = (end_time - t) // dt
             iters_to_do = min(self.output_chunk_iters, iters_remaining)

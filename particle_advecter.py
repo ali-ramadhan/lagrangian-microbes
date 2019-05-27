@@ -156,8 +156,7 @@ class ParticleAdvecter:
         grid_times = np.array([(grid_times[i] - grid_times[0]) // np.timedelta64(1, "s")
                                for i in range(grid_times.size)])
 
-        logger.info("{:s} Building parcels grid, fields, and particle set... "
-                    "(this might take a long time as tons of data is downloaded over OPeNDAP)".format(tilestamp))
+        logger.info("{:s} Building parcels grid, fields, and particle set...".format(tilestamp))
 
         grid = parcels.grid.RectilinearZGrid(grid_lons, grid_lats, depth=grid_depth, time=grid_times, mesh="spherical")
 
@@ -244,6 +243,11 @@ class ParticleAdvecter:
                         .format(tilestamp, pretty_time(pickling_time), pretty_filesize(pickle_filesize),
                                 pretty_filesize(pickle_filesize / (iters_to_do * particles_per_tile))))
 
+        logger.info("{:s} Saving particle locations...".format(tilestamp))
+        for i, p in enumerate(pset):
+            self.particle_lons[tile_id][i] = p.lon
+            self.particle_lats[tile_id][i] = p.lat
+
     def create_netcdf_file(self, start_time, end_time, dt):
         logger = logging.getLogger(__name__ + "netcdf")
 
@@ -268,7 +272,7 @@ class ParticleAdvecter:
         pkl_files.sort()
 
         for pkl_filepath in pkl_files:
-            logger.info("Collecting particle location from {:s}...".format(pkl_filepath))
+            logger.info("Collecting particle locations from {:s}...".format(pkl_filepath))
 
             filename = os.path.basename(pkl_filepath)
             t1 = int(filename.split("_")[2])  # Starting iteration

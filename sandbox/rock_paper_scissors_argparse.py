@@ -7,12 +7,6 @@ import numpy as np
 from numpy import int8
 import ffmpeg
 
-# # Configure logger first before importing any sub-module that depend on the logger being already configured.
-# import logging.config
-#
-# logging.config.fileConfig("logging.ini")
-# logger = logging.getLogger(__name__)
-
 from particle_advecter import ParticleAdvecter, uniform_particle_locations
 from interactions import rock_paper_scissors
 from interaction_simulator import InteractionSimulator

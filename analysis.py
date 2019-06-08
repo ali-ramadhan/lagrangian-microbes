@@ -1,9 +1,11 @@
+import matplotlib
+matplotlib.use("Agg")
+
 import os
 
 import xarray as xr
 from numpy import sum
 
-import matplotlib
 import matplotlib.pyplot as plt
 
 # Configure logger first before importing any sub-module that depend on the logger being already configured.
@@ -27,6 +29,7 @@ def species_count_figure(output_dir, start_time, end_time, dt, png_filename="spe
 
     logger.info("Calculating species count time series...")
     for i, t in enumerate(times):
+        logger.info("Calculating species count time series... {:}".format(t))
         n_rocks.append(sum(microbe_data["species"][:, i] == ROCK))
         n_papers.append(sum(microbe_data["species"][:, i] == PAPER))
         n_scissors.append(sum(microbe_data["species"][:, i] == SCISSORS))

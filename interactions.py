@@ -40,7 +40,7 @@ def rock_paper_scissors_interaction(parameters, microbe_properties, p1, p2):
             species[p1] = species[p2]
 
 
-def rock_paper_scissors(N_microbes, pRS=0.5, pPR=0.5, pSP=0.5):
+def rock_paper_scissors(N_microbes, pRS, pPR, pSP):
     microbe_properties = {
         "species": np.random.choice([ROCK, PAPER, SCISSORS], N_microbes)
     }

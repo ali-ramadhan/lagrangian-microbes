@@ -26,6 +26,7 @@ class InteractionSimulator:
             interaction_radius,
             interaction_norm=2,
             self_interaction=None,
+            advection_dir=".",
             output_dir="."
     ):
 
@@ -46,13 +47,14 @@ class InteractionSimulator:
         self.interaction_radius = interaction_radius
         self.interaction_norm = interaction_norm
         self.self_interaction = self_interaction
+        self.advection_dir = advection_dir
         self.output_dir = output_dir
         self.iteration = 0
 
     def time_step(self, start_time, end_time, dt):
         logger = logging.getLogger(__name__ + "interactions")
 
-        nc_input_filepath = os.path.join(self.output_dir, "particle_data.nc")
+        nc_input_filepath = os.path.join(self.advection_dir, "particle_data.nc")
         particle_data = xr.open_dataset(nc_input_filepath)
         N_particles, Nt = particle_data["longitude"].shape
         times = [start_time + n * dt for n in range(Nt)]

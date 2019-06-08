@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 from interactions import ROCK, PAPER, SCISSORS, ROCK_COLOR, PAPER_COLOR, SCISSORS_COLOR
 
 
-def species_count_figure(output_dir, start_time, end_time, dt):
+def species_count_figure(output_dir, start_time, end_time, dt, png_filename="species_count.png"):
     iters = (end_time - start_time) // dt
     times = [start_time + n * dt for n in range(iters)]
 
@@ -46,6 +46,6 @@ def species_count_figure(output_dir, start_time, end_time, dt):
     plt.title("Rock, paper, scissors species count")
     ax.legend()
 
-    png_filepath = os.path.join(output_dir, "species_count.png")
-    print("Saving species count time series figure: {:s}".format(png_filepath))
+    png_filepath = os.path.join(output_dir, png_filename)
+    logger.info("Saving species count time series figure: {:s}".format(png_filepath))
     plt.savefig(png_filepath, dpi=300, format='png', transparent=False)

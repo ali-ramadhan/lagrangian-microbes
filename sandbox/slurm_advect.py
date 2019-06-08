@@ -28,22 +28,24 @@ if __name__ == "__main__":
 
     script_lines = \
         ["#!/bin/bash",
+         "#",
          "#SBATCH --job-name=advect_microbes_N{:d}_Kh{:d}".format(N, Kh),
          "#SBATCH --output=lagrangian_microbes_N{:d}_Kh{:d}_%j.log".format(N, Kh),
          "#SBATCH --mail-type=ALL",
          "#SBATCH --mail-user=alir@mit.edu",
          "#SBATCH --partition=sched_mit_darwin2",
-         "#SBATCH --nodes=1"
-         "#SBATCH --ntasks=1"
-         "#SBATCH --cpus-per-task=28"
+         "#SBATCH --nodes=1",
+         "#SBATCH --ntasks=1",
+         "#SBATCH --cpus-per-task=28",
          "#SBATCH --time=60:00",
          "#SBATCH --mem=100gb",
+         "",
          CD_CMD,
          ENV_CMD,
          rps_advect_cmd(C, N, Kh, OUTPUT_DIR)]
 
     slurm_script_filename = "advect_rps_N{:d}_Kh{:d}.slurm".format(N, Kh)
-    with open(slurm_script_filename) as f:
+    with open(slurm_script_filename, "w") as f:
         f.writelines("{:s}\n".format(l) for l in script_lines)
 
     p = Popen("sbatch {:s}".format(slurm_script_filename), shell=True)

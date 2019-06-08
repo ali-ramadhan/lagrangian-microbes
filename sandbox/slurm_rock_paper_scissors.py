@@ -10,19 +10,29 @@ OUTPUT_DIR = "~/cnhlab004/lagrangian_microbes_output/"
 
 def rps_advect_cmd(C, N, Kh, dir):
     return "python rock_paper_scissors_advect.py" \
-           + " -C " + str(C) \
-           + " -N " + str(N) \
+           + " -C " + str(C)  \
+           + " -N " + str(N)  \
            + " -K " + str(Kh) \
            + " -d " + str(dir)
 
 
 def rps_interact_cmd(N, Kh, p, a, r, dir):
     return "python rock_paper_scissors_interact.py" \
-           + " -N " + str(N) \
+           + " -N " + str(N)  \
            + " -K " + str(Kh) \
-           + " -p " + str(p) \
-           + " -a " + str(a) \
-           + " -r " + str(r) \
+           + " -p " + str(p)  \
+           + " -a " + str(a)  \
+           + " -r " + str(r)  \
+           + " -d " + str(dir)
+
+
+def rps_analyze_cmd(N, Kh, p, a, r, dir):
+    return "python rock_paper_scissors_analyze.py" \
+           + " -N " + str(N)  \
+           + " -K " + str(Kh) \
+           + " -p " + str(p)  \
+           + " -a " + str(a)  \
+           + " -r " + str(r)  \
            + " -d " + str(dir)
 
 
@@ -113,6 +123,54 @@ def ensemble_interaction():
 
                     Popen("sbatch {:s}".format(slurm_script_filename), shell=True)
 
+def ensemble_analysis():
+    minutes = {
+        10000: 20,
+        100000: 60,
+        1000000: 180
+    }
+
+    interaction_lengthscale = {
+        10000: 0.05,    # ~5 km
+        100000: 0.0015, # ~1.5 km
+        1000000: 0.005  # ~500 m
+    }
+
+    def slurm_script_lines(N, Kh, p, a, r, mins):
+        lines = \
+            ["#!/bin/bash",
+             "#",
+             "#SBATCH --job-name=analyze_microbes_N{:d}_Kh{:d}_p{:}_a{:}".format(N, Kh, p, a),
+             "#SBATCH --output=analyze_microbes_N{:d}_Kh{:d}_p{:}_a{:}_%j.log".format(N, Kh, p, a),
+             "#SBATCH --mail-type=ALL",
+             "#SBATCH --mail-user=alir@mit.edu",
+             "#SBATCH --partition=sched_mit_darwin2",
+             "#SBATCH --nodes=1",
+             "#SBATCH --ntasks=1",
+             "#SBATCH --cpus-per-task=1",
+             "#SBATCH --time={:d}:00".format(mins),
+             "#SBATCH --mem=10gb",
+             "",
+             CD_CMD,
+             ENV_CMD,
+             rps_analyze_cmd(N, Kh, p, a, r, OUTPUT_DIR)]
+
+        return lines
+
+    for N in [10000]:
+        for Kh in [0, 20, 100, 500]:
+            for p in [0.5, 0.7]:
+                for a in [0, 0.1, 0.01, 0.001]:
+                    r = interaction_lengthscale[N]
+
+                    slurm_script_filename = "analyze_rps_N{:d}_Kh{:d}_p{:}_a{:}.slurm".format(N, Kh, p, a)
+
+                    with open(slurm_script_filename, "w") as f:
+                        script_lines = slurm_script_lines(N, Kh, p, a, r, minutes[N])
+                        f.writelines("{:s}\n".format(l) for l in script_lines)
+
+                    # p = Popen("sbatch {:s}".format(slurm_script_filename), shell=True)
+
 if __name__ == "__main__":
-    ensemble_interaction()
+    ensemble_analysis()
 

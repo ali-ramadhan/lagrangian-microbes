@@ -3,8 +3,6 @@ import glob
 import argparse
 from datetime import datetime, timedelta
 
-import numpy as np
-from numpy import int8
 import ffmpeg
 
 from particle_advecter import ParticleAdvecter, uniform_particle_locations

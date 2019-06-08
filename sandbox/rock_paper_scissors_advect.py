@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 from particle_advecter import ParticleAdvecter, uniform_particle_locations
 
-parser = argparse.ArgumentParser(description="Simulate some Lagrangian microbes in the Northern Pacific.")
+parser = argparse.ArgumentParser(description="Advect some Lagrangian microbes in the Northern Pacific.")
 
 parser.add_argument("-C", "--cores", type=int, required=True, help="Number of cores to use")
 parser.add_argument("-N", "--N-particles", type=int, required=True, help="Number of Lagrangian microbes")

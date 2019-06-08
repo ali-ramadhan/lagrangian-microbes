@@ -12,11 +12,12 @@ parser.add_argument("-K", "--Kh", type=float, required=True, help="Isotropic hor
 parser.add_argument("-d", "--output_dir", type=str, required=True, help="Output directory")
 
 args = parser.parse_args()
-C, N, Kh, base_dir = args.cores, args.N_particles, args.Kh, args.output_dir
+C, N, Kh = args.cores, args.N_particles, args.Kh
 
 Kh = int(Kh) if Kh.is_integer() else Kh
 
 # Output directories.
+base_dir = args.output_dir
 output_dir = os.path.join(base_dir, "N" + str(N) + "_Kh" + str(Kh))
 
 # We'll advect 6 months at a time as we hit a weird joblib error around November if you try advecting for a full year.

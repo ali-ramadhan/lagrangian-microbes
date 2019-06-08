@@ -112,6 +112,9 @@ parcels_examples/
 # Joblib intermediate output/pickle files
 core.*
 
+# Generated slurm/sbatch scripts
+*.slurm
+
 # Output data
 *.nc
 *.pickle

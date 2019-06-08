@@ -63,7 +63,7 @@ def ensemble_advection():
                 script_lines = slurm_script_lines(C, N, Kh, hours[N])
                 f.writelines("{:s}\n".format(l) for l in script_lines)
 
-            p = Popen("sbatch {:s}".format(slurm_script_filename), shell=True)
+            Popen("sbatch {:s}".format(slurm_script_filename), shell=True)
 
 def ensemble_interaction():
     hours = {
@@ -111,7 +111,8 @@ def ensemble_interaction():
                         script_lines = slurm_script_lines(N, Kh, p, a, r, hours[N])
                         f.writelines("{:s}\n".format(l) for l in script_lines)
 
-                    # p = Popen("sbatch {:s}".format(slurm_script_filename), shell=True)
+                    Popen("sbatch {:s}".format(slurm_script_filename), shell=True)
 
 if __name__ == "__main__":
+    ensemble_interaction()
 

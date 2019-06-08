@@ -32,7 +32,7 @@ dt = timedelta(hours=1)
 
 # Create an interaction simulator that uses the rock-paper-scissors pair interaction.
 rps_interaction = rock_paper_scissors(N_microbes=N, pRS=pRS, pPR=pPR, pSP=pSP)
-isim = InteractionSimulator(pair_interaction=rps_interaction, interaction_radius=r, output_dir=output_dir)
+isim = InteractionSimulator(pair_interaction=rps_interaction, interaction_radius=r, advection_dir=advection_dir, output_dir=output_dir)
 
 # Simulate the interactions.
 isim.time_step(start_time, end_time, dt)

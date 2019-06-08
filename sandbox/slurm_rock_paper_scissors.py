@@ -91,7 +91,7 @@ def ensemble_interaction():
              "#SBATCH --ntasks=1",
              "#SBATCH --cpus-per-task=1",
              "#SBATCH --time={:d}:00:00".format(hours),
-             "#SBATCH --mem=5gb",
+             "#SBATCH --mem=20gb",
              "",
              CD_CMD,
              ENV_CMD,
@@ -99,7 +99,7 @@ def ensemble_interaction():
 
         return lines
 
-    for N in [10000]:
+    for N in [100000]:
         for Kh in [0, 20, 100, 500]:
             for p in [0.5, 0.7]:
                 for a in [0, 0.1, 0.01, 0.001]:

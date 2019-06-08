@@ -21,6 +21,7 @@ from analysis import species_count_figure
 
 parser = argparse.ArgumentParser(description="Simulate some Lagrangian microbes in the Northern Pacific.")
 
+parser.add_argument("-C", "--cores", type=int, required=True, help="Number of cores to use")
 parser.add_argument("-N", "--N-particles", type=int, required=True, help="Number of Lagrangian microbes")
 parser.add_argument("-K", "--Kh", type=float, required=True, help="Isotropic horizontal diffusivity")
 parser.add_argument("-p", type=float, required=True, help="Interaction probability")
@@ -28,8 +29,10 @@ parser.add_argument("-a", type=float, required=True, help="Asymmetric factor in 
 parser.add_argument("-d", "--output_dir", type=str, required=True, help="Output directory")
 
 args = parser.parse_args()
-N, Kh, p, a, base_dir = args.N_particles, args.Kh, args.p, args.a, args.output_dir
+C, N, Kh, p, a, base_dir = args.cores, args.N_particles, args.Kh, args.p, args.a, args.output_dir
 pRS, pPR, pSP = p, p, p + a
+
+Kh = int(Kh) if Kh.is_integer() else Kh
 
 # Output directories.
 output_dir = os.path.join(base_dir, "N" + str(N) + "_Kh" + str(Kh) + "_p" + str(p) + "_a" + str(a))
@@ -43,7 +46,7 @@ dt = timedelta(hours=1)
 particle_lons, particle_lats = uniform_particle_locations(N_particles=N, lat_min=25, lat_max=35, lon_min=205, lon_max=215)
 
 # Create a particle advecter that will the advect the particles we just generated in parallel.
-pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=25, velocity_field="OSCAR", output_dir=output_dir, Kh=Kh)
+pa = ParticleAdvecter(particle_lons, particle_lats, N_procs=C, velocity_field="OSCAR", output_dir=output_dir, Kh=Kh)
 
 # Advect the particles and save all the data to NetCDF.
 pa.time_step(start_time, mid_time, dt)

@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use("Agg")
+
 import os
 import re
 import datetime
@@ -7,7 +10,6 @@ from numpy import datetime64, abs, argmin
 import xarray as xr
 import joblib
 
-import matplotlib
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker

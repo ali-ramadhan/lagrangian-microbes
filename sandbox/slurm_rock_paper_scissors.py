@@ -167,7 +167,7 @@ def ensemble_analysis():
 
         return lines
 
-    for N in [10000]:
+    for N in [100000]:
         for Kh in [0, 20, 100, 500]:
             for p in [0.5, 0.7]:
                 for a in [0, 0.1, 0.01, 0.001]:
@@ -210,7 +210,7 @@ def ensemble_movies():
 
         return lines
 
-    for N in [10000]:
+    for N in [100000]:
         for Kh in [0, 20, 100, 500]:
             for p in [0.5, 0.7]:
                 for a in [0, 0.1, 0.01, 0.001]:

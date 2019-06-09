@@ -40,7 +40,7 @@ mp.plot_frames(start_time, end_time, dt)
 # Make movie!
 (
     ffmpeg
-    .input(os.path.join(output_dir, "lagrangian_microbes_frame%05d.png"), framerate=30)
+    .input(os.path.join(output_dir, "lagrangian_microbes_%05d.png"), framerate=30)
     .output(os.path.join(output_dir, "movie.mp4"), crf=15, pix_fmt='yuv420p')
     .run()
 )

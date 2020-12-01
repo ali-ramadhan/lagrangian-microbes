@@ -2,7 +2,7 @@
 
 Rock-paper-scissors between Lagrangian microbes in a turbulent ocean.
 
-[Movie showing example run with 490,000 particles and rock-paper-scissors interaction (Google Drive)](https://drive.google.com/file/d/16nyiZteGGKThLPX7wo8w-I4qiapM-g8R/view?usp=sharing)
+[https://www.youtube.com/watch?v=evxhhAHxJPc&feature=youtu.be](https://www.youtube.com/watch?v=evxhhAHxJPc&feature=youtu.be)
 
 Initial configuration with 490,000 regularly spaced Lagrangian microbes in a small patch in the Northern Pacific. Each Lagrangian microbe is assigned a species at random (either rock, paper, or scissors).
 ![Initial configuration](img/microbe_warfare_ph0000000.png)
